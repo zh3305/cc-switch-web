@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { listen } from "@/lib/transport";
 import { DeepLinkImportRequest, deeplinkApi } from "@/lib/api/deeplink";
 import {
   Dialog,
@@ -52,14 +52,14 @@ export function DeepLinkImportDialog() {
     // Listen for deep link import events
     const unlistenImport = listen<DeepLinkImportRequest>(
       "deeplink-import",
-      async (event) => {
-        console.log("Deep link import event received:", event.payload);
+      async (payload) => {
+        console.log("Deep link import event received:", payload);
 
         // If config is present, merge it to get the complete configuration
-        if (event.payload.config || event.payload.configUrl) {
+        if (payload.config || payload.configUrl) {
           try {
             const mergedRequest = await deeplinkApi.mergeDeeplinkConfig(
-              event.payload,
+              payload,
             );
             console.log("Config merged successfully:", mergedRequest);
             setRequest(mergedRequest);
@@ -70,10 +70,10 @@ export function DeepLinkImportDialog() {
                 error instanceof Error ? error.message : String(error),
             });
             // Fall back to original request
-            setRequest(event.payload);
+            setRequest(payload);
           }
         } else {
-          setRequest(event.payload);
+          setRequest(payload);
         }
 
         setIsOpen(true);
@@ -81,10 +81,10 @@ export function DeepLinkImportDialog() {
     );
 
     // Listen for deep link error events
-    const unlistenError = listen<DeeplinkError>("deeplink-error", (event) => {
-      console.error("Deep link error:", event.payload);
+    const unlistenError = listen<DeeplinkError>("deeplink-error", (payload) => {
+      console.error("Deep link error:", payload);
       toast.error(t("deeplink.parseError"), {
-        description: event.payload.error,
+        description: payload.error,
       });
     });
 
