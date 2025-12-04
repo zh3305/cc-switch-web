@@ -69,10 +69,10 @@ export const providerPresets: ProviderPreset[] = [
       env: {
         ANTHROPIC_BASE_URL: "https://api.deepseek.com/anthropic",
         ANTHROPIC_AUTH_TOKEN: "",
-        ANTHROPIC_MODEL: "DeepSeek-V3.2-Exp",
-        ANTHROPIC_DEFAULT_HAIKU_MODEL: "DeepSeek-V3.2-Exp",
-        ANTHROPIC_DEFAULT_SONNET_MODEL: "DeepSeek-V3.2-Exp",
-        ANTHROPIC_DEFAULT_OPUS_MODEL: "DeepSeek-V3.2-Exp",
+        ANTHROPIC_MODEL: "DeepSeek-V3.2",
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: "DeepSeek-V3.2",
+        ANTHROPIC_DEFAULT_SONNET_MODEL: "DeepSeek-V3.2",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "DeepSeek-V3.2",
       },
     },
     category: "cn_official",
@@ -184,7 +184,7 @@ export const providerPresets: ProviderPreset[] = [
         ANTHROPIC_DEFAULT_OPUS_MODEL: "ZhipuAI/GLM-4.6",
       },
     },
-    category: "aggregator"
+    category: "aggregator",
   },
   {
     name: "KAT-Coder",
@@ -232,7 +232,7 @@ export const providerPresets: ProviderPreset[] = [
   {
     name: "MiniMax",
     websiteUrl: "https://platform.minimaxi.com",
-    apiKeyUrl: "https://platform.minimax.com/subscribe/coding-plan",
+    apiKeyUrl: "https://platform.minimaxi.com/subscribe/coding-plan",
     settingsConfig: {
       env: {
         ANTHROPIC_BASE_URL: "https://api.minimaxi.com/anthropic",
@@ -257,11 +257,11 @@ export const providerPresets: ProviderPreset[] = [
   },
   {
     name: "MiniMax en",
-    websiteUrl: "https://platform.minimaxi.io",
+    websiteUrl: "https://platform.minimax.io",
     apiKeyUrl: "https://platform.minimax.io/subscribe/coding-plan",
     settingsConfig: {
       env: {
-        ANTHROPIC_BASE_URL: "https://api.minimaxi.io/anthropic",
+        ANTHROPIC_BASE_URL: "https://api.minimax.io/anthropic",
         ANTHROPIC_AUTH_TOKEN: "",
         API_TIMEOUT_MS: "3000000",
         CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: 1,
@@ -313,7 +313,7 @@ export const providerPresets: ProviderPreset[] = [
         ANTHROPIC_DEFAULT_OPUS_MODEL: "Ling-1T",
       },
     },
-    category: "cn_official"
+    category: "cn_official",
   },
   {
     name: "AiHubMix",
