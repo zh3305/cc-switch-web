@@ -192,6 +192,76 @@ paru -S cc-switch-bin
 
 Download the latest `CC-Switch-v{version}-Linux.deb` package or `CC-Switch-v{version}-Linux.AppImage` from the [Releases](../../releases) page.
 
+### Web Version (Headless / SSH Server)
+
+**Why Web Version?**
+
+When working on remote servers via SSH or in headless environments (Docker containers, CI/CD pipelines, cloud instances), the desktop GUI cannot be used. The Web version solves this problem by providing a browser-accessible interface while maintaining full functionality.
+
+**Use Cases:**
+- 🖥️ Remote server management via SSH
+- 🐳 Docker containers without X11/Wayland
+- ☁️ Cloud instances (AWS EC2, Azure VM, GCP Compute)
+- 🔄 CI/CD pipelines requiring AI CLI configuration
+- 🏢 Headless server environments
+
+**Download & Run:**
+
+```bash
+# Download the Web version
+wget https://github.com/farion1231/cc-switch/releases/latest/download/cc-switch-web-linux-x64-v{version}.tar.gz
+
+# Extract
+tar -xzf cc-switch-web-linux-x64-v{version}.tar.gz
+cd cc-switch-web/
+
+# Run (default port 17666)
+./cc-switch-web
+
+# Or specify custom port
+CC_SWITCH_PORT=8080 ./cc-switch-web
+
+# Listen on all interfaces for remote access
+CC_SWITCH_HOST=0.0.0.0 ./cc-switch-web
+```
+
+Then open `http://localhost:17666` in your browser (or use the server's IP address if accessing remotely).
+
+**Configuration Options:**
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `CC_SWITCH_PORT` | 17666 | Server port |
+| `CC_SWITCH_HOST` | 127.0.0.1 | Bind address (use 0.0.0.0 for remote access) |
+| `CC_SWITCH_AUTO_PORT` | true | Auto-select next port if occupied |
+| `CC_SWITCH_AUTH_TOKEN` | (none) | Optional authentication token |
+
+**Run as System Service:**
+
+```bash
+# Install service (requires root)
+sudo cp cc-switch-web /opt/
+sudo cp cc-switch-web.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable cc-switch-web
+sudo systemctl start cc-switch-web
+
+# Check status
+sudo systemctl status cc-switch-web
+```
+
+**Features:**
+- ✅ All desktop features available (Provider/MCP/Skills/Prompts management)
+- ✅ WebSocket real-time updates
+- ✅ Shares same data with desktop version (`~/.cc-switch/`)
+- ✅ Single binary with embedded frontend (19MB)
+- ✅ Zero dependencies (no Node.js, no database server needed)
+- ✅ Auto port selection on conflict
+
+**Architecture:**
+
+The Web version uses a Rust backend with embedded React frontend, communicating via WebSocket + JSON-RPC 2.0 protocol. All data is stored in the same SQLite database (`~/.cc-switch/cc-switch.db`) used by the desktop version.
+
 ## Quick Start
 
 ### Basic Usage

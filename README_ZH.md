@@ -192,6 +192,76 @@ paru -S cc-switch-bin
 
 从 [Releases](../../releases) 页面下载最新版本的 `CC-Switch-v{版本号}-Linux.deb` 包或者 `CC-Switch-v{版本号}-Linux.AppImage` 安装包。
 
+### Web 版本（无头/SSH 服务器）
+
+**为什么需要 Web 版本？**
+
+当通过 SSH 在远程服务器上工作，或在无头环境（Docker 容器、CI/CD 流水线、云实例）中时，无法使用桌面 GUI。Web 版本通过提供浏览器可访问的界面解决了这个问题，同时保留了完整功能。
+
+**使用场景：**
+- 🖥️ 通过 SSH 管理远程服务器
+- 🐳 没有 X11/Wayland 的 Docker 容器
+- ☁️ 云实例（AWS EC2、Azure VM、GCP Compute）
+- 🔄 需要配置 AI CLI 的 CI/CD 流水线
+- 🏢 无头服务器环境
+
+**下载和运行：**
+
+```bash
+# 下载 Web 版本
+wget https://github.com/farion1231/cc-switch/releases/latest/download/cc-switch-web-linux-x64-v{版本号}.tar.gz
+
+# 解压
+tar -xzf cc-switch-web-linux-x64-v{版本号}.tar.gz
+cd cc-switch-web/
+
+# 运行（默认端口 17666）
+./cc-switch-web
+
+# 或指定自定义端口
+CC_SWITCH_PORT=8080 ./cc-switch-web
+
+# 监听所有接口以供远程访问
+CC_SWITCH_HOST=0.0.0.0 ./cc-switch-web
+```
+
+然后在浏览器中打开 `http://localhost:17666`（如果远程访问则使用服务器的 IP 地址）。
+
+**配置选项：**
+
+| 环境变量 | 默认值 | 说明 |
+|---------|--------|------|
+| `CC_SWITCH_PORT` | 17666 | 服务器端口 |
+| `CC_SWITCH_HOST` | 127.0.0.1 | 绑定地址（远程访问用 0.0.0.0） |
+| `CC_SWITCH_AUTO_PORT` | true | 端口被占用时自动选择下一个 |
+| `CC_SWITCH_AUTH_TOKEN` | （无） | 可选的认证令牌 |
+
+**作为系统服务运行：**
+
+```bash
+# 安装服务（需要 root）
+sudo cp cc-switch-web /opt/
+sudo cp cc-switch-web.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable cc-switch-web
+sudo systemctl start cc-switch-web
+
+# 检查状态
+sudo systemctl status cc-switch-web
+```
+
+**特性：**
+- ✅ 所有桌面功能可用（Provider/MCP/Skills/Prompts 管理）
+- ✅ WebSocket 实时更新
+- ✅ 与桌面版本共享数据（`~/.cc-switch/`）
+- ✅ 内嵌前端的单一二进制文件（19MB）
+- ✅ 零依赖（不需要 Node.js，不需要数据库服务器）
+- ✅ 端口冲突时自动选择
+
+**架构：**
+
+Web 版本使用 Rust 后端，内嵌 React 前端，通过 WebSocket + JSON-RPC 2.0 协议通信。所有数据存储在与桌面版本相同的 SQLite 数据库（`~/.cc-switch/cc-switch.db`）中。
+
 ## 快速开始
 
 ### 基本使用
