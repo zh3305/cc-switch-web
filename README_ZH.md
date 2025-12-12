@@ -18,31 +18,6 @@
 
 </div>
 
-## ❤️赞助商
-
-![智谱 GLM](assets/partners/banners/glm-zh.jpg)
-
-感谢智谱AI的 GLM CODING PLAN 赞助了本项目！
-
-GLM CODING PLAN 是专为AI编码打造的订阅套餐,每月最低仅需20元，即可在十余款主流AI编码工具如 Claude Code、Cline 中畅享智谱旗舰模型 GLM-4.6，为开发者提供顶尖、高速、稳定的编码体验。
-
-CC Switch 已经预设了智谱GLM，只需要填写 key 即可一键导入编程工具。智谱AI为本软件的用户提供了特别优惠，使用[此链接](https://www.bigmodel.cn/claude-code?ic=RRVJPB5SII)购买可以享受九折优惠。
-
----
-
-<table>
-<tr>
-<td width="180"><img src="assets/partners/logos/packycode.png" alt="PackyCode" width="150"></td>
-<td>感谢 PackyCode 赞助了本项目！PackyCode 是一家稳定、高效的API中转服务商，提供 Claude Code、Codex、Gemini 等多种中转服务。PackyCode 为本软件的用户提供了特别优惠，使用<a href="https://www.packyapi.com/register?aff=cc-switch">此链接</a>注册并在充值时填写"cc-switch"优惠码，可以享受9折优惠。</td>
-</tr>
-
-<tr>
-<td width="180"><img src="assets/partners/logos/sds-zh.png" alt="ShanDianShuo" width="150"></td>
-<td>感谢闪电说赞助了本项目！闪电说是本地优先的 AI 语音输入法：毫秒级响应，数据不离设备；打字速度提升 4 倍，AI 智能纠错；绝对隐私安全，完全免费，配合 Claude Code 写代码效率翻倍！支持 Mac/Win 双平台，<a href="https://www.shandianshuo.cn">免费下载</a></td>
-</tr>
-
-</table>
-
 ## 界面预览
 
 |                  主界面                   |                  添加供应商                  |

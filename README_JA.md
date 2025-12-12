@@ -18,31 +18,6 @@ Claude Code・Codex・Gemini CLI のプロバイダ設定、MCP サーバー、S
 
 </div>
 
-## ❤️スポンサー
-
-![Zhipu GLM](assets/partners/banners/glm-en.jpg)
-
-本プロジェクトは Z.ai の GLM CODING PLAN による支援を受けています。
-
-GLM CODING PLAN は AI コーディング向けのサブスクリプションで、月額わずか 3 ドルから。Claude Code、Cline、Roo Code など 10 以上の人気 AI コーディングツールでフラッグシップモデル GLM-4.6 を利用でき、速く安定した開発体験を提供します。
-
-[このリンク](https://z.ai/subscribe?ic=8JVLJQFSKB) から申し込むと 10% オフになります！
-
----
-
-<table>
-<tr>
-<td width="180"><img src="assets/partners/logos/packycode.png" alt="PackyCode" width="150"></td>
-<td>PackyCode のご支援に感謝します！PackyCode は Claude Code、Codex、Gemini などのリレーサービスを提供する信頼性の高い API 中継プラットフォームです。本ソフト利用者向けに特別割引があります：<a href="https://www.packyapi.com/register?aff=cc-switch">このリンク</a>で登録し、チャージ時に「cc-switch」クーポンを入力すると 10% オフになります。</td>
-</tr>
-
-<tr>
-<td width="180"><img src="assets/partners/logos/sds-en.png" alt="ShanDianShuo" width="150"></td>
-<td>ShanDianShuo のご支援に感謝します！ShanDianShuo はローカルファーストの音声入力ツールで、ミリ秒遅延・データは端末から外に出ず・キーボード入力の 4 倍の速度・AI 自動補正・プライバシー優先で完全無料。Claude Code と組み合わせればコーディング効率が倍増します。<a href="https://www.shandianshuo.cn">Mac/Win 版を無料ダウンロード</a></td>
-</tr>
-
-</table>
-
 ## スクリーンショット
 
 |                  メイン画面                   |                  プロバイダ追加                  |
