@@ -1,9 +1,20 @@
 import { useTranslation } from "react-i18next";
 import { FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import EndpointSpeedTest from "./EndpointSpeedTest";
 import { ApiKeySection, EndpointField } from "./shared";
-import type { ProviderCategory } from "@/types";
+import type {
+  ProviderCategory,
+  ClaudeApiFormat,
+  ClaudeApiKeyField,
+} from "@/types";
 import type { TemplateValueConfig } from "@/config/claudeProviderPresets";
 
 interface EndpointCandidate {
@@ -35,16 +46,20 @@ interface ClaudeFormFieldsProps {
   isEndpointModalOpen: boolean;
   onEndpointModalToggle: (open: boolean) => void;
   onCustomEndpointsChange?: (endpoints: string[]) => void;
+  autoSelect: boolean;
+  onAutoSelectChange: (checked: boolean) => void;
 
   // Model Selector
   shouldShowModelSelector: boolean;
   claudeModel: string;
+  reasoningModel: string;
   defaultHaikuModel: string;
   defaultSonnetModel: string;
   defaultOpusModel: string;
   onModelChange: (
     field:
       | "ANTHROPIC_MODEL"
+      | "ANTHROPIC_REASONING_MODEL"
       | "ANTHROPIC_DEFAULT_HAIKU_MODEL"
       | "ANTHROPIC_DEFAULT_SONNET_MODEL"
       | "ANTHROPIC_DEFAULT_OPUS_MODEL",
@@ -53,6 +68,14 @@ interface ClaudeFormFieldsProps {
 
   // Speed Test Endpoints
   speedTestEndpoints: EndpointCandidate[];
+
+  // API Format (for third-party providers that use OpenAI Chat Completions format)
+  apiFormat: ClaudeApiFormat;
+  onApiFormatChange: (format: ClaudeApiFormat) => void;
+
+  // Auth Field (ANTHROPIC_AUTH_TOKEN or ANTHROPIC_API_KEY)
+  apiKeyField: ClaudeApiKeyField;
+  onApiKeyFieldChange: (field: ClaudeApiKeyField) => void;
 }
 
 export function ClaudeFormFields({
@@ -75,13 +98,20 @@ export function ClaudeFormFields({
   isEndpointModalOpen,
   onEndpointModalToggle,
   onCustomEndpointsChange,
+  autoSelect,
+  onAutoSelectChange,
   shouldShowModelSelector,
   claudeModel,
+  reasoningModel,
   defaultHaikuModel,
   defaultSonnetModel,
   defaultOpusModel,
   onModelChange,
   speedTestEndpoints,
+  apiFormat,
+  onApiFormatChange,
+  apiKeyField,
+  onApiKeyFieldChange,
 }: ClaudeFormFieldsProps) {
   const { t } = useTranslation();
 
@@ -143,7 +173,13 @@ export function ClaudeFormFields({
           value={baseUrl}
           onChange={onBaseUrlChange}
           placeholder={t("providerForm.apiEndpointPlaceholder")}
-          hint={t("providerForm.apiHint")}
+          hint={
+            apiFormat === "openai_responses"
+              ? t("providerForm.apiHintResponses")
+              : apiFormat === "openai_chat"
+                ? t("providerForm.apiHintOAI")
+                : t("providerForm.apiHint")
+          }
           onManageClick={() => onEndpointModalToggle(true)}
         />
       )}
@@ -158,8 +194,80 @@ export function ClaudeFormFields({
           initialEndpoints={speedTestEndpoints}
           visible={isEndpointModalOpen}
           onClose={() => onEndpointModalToggle(false)}
+          autoSelect={autoSelect}
+          onAutoSelectChange={onAutoSelectChange}
           onCustomEndpointsChange={onCustomEndpointsChange}
         />
+      )}
+
+      {/* API 格式选择（仅非官方、非云服务商显示） */}
+      {shouldShowModelSelector && category !== "cloud_provider" && (
+        <div className="space-y-2">
+          <FormLabel htmlFor="apiFormat">
+            {t("providerForm.apiFormat", { defaultValue: "API 格式" })}
+          </FormLabel>
+          <Select value={apiFormat} onValueChange={onApiFormatChange}>
+            <SelectTrigger id="apiFormat" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="anthropic">
+                {t("providerForm.apiFormatAnthropic", {
+                  defaultValue: "Anthropic Messages (原生)",
+                })}
+              </SelectItem>
+              <SelectItem value="openai_chat">
+                {t("providerForm.apiFormatOpenAIChat", {
+                  defaultValue: "OpenAI Chat Completions (需转换)",
+                })}
+              </SelectItem>
+              <SelectItem value="openai_responses">
+                {t("providerForm.apiFormatOpenAIResponses", {
+                  defaultValue: "OpenAI Responses API (需转换)",
+                })}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {t("providerForm.apiFormatHint", {
+              defaultValue: "选择供应商 API 的输入格式",
+            })}
+          </p>
+        </div>
+      )}
+
+      {/* 认证字段选择器 */}
+      {shouldShowModelSelector && (
+        <div className="space-y-2">
+          <FormLabel>
+            {t("providerForm.authField", { defaultValue: "认证字段" })}
+          </FormLabel>
+          <Select
+            value={apiKeyField}
+            onValueChange={(v) => onApiKeyFieldChange(v as ClaudeApiKeyField)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ANTHROPIC_AUTH_TOKEN">
+                {t("providerForm.authFieldAuthToken", {
+                  defaultValue: "ANTHROPIC_AUTH_TOKEN（默认）",
+                })}
+              </SelectItem>
+              <SelectItem value="ANTHROPIC_API_KEY">
+                {t("providerForm.authFieldApiKey", {
+                  defaultValue: "ANTHROPIC_API_KEY",
+                })}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {t("providerForm.authFieldHint", {
+              defaultValue: "选择写入配置的认证环境变量名",
+            })}
+          </p>
+        </div>
       )}
 
       {/* 模型选择器 */}
@@ -181,6 +289,22 @@ export function ClaudeFormFields({
                 placeholder={t("providerForm.modelPlaceholder", {
                   defaultValue: "",
                 })}
+                autoComplete="off"
+              />
+            </div>
+
+            {/* 推理模型 */}
+            <div className="space-y-2">
+              <FormLabel htmlFor="reasoningModel">
+                {t("providerForm.anthropicReasoningModel")}
+              </FormLabel>
+              <Input
+                id="reasoningModel"
+                type="text"
+                value={reasoningModel}
+                onChange={(e) =>
+                  onModelChange("ANTHROPIC_REASONING_MODEL", e.target.value)
+                }
                 autoComplete="off"
               />
             </div>

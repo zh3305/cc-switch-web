@@ -76,19 +76,8 @@ fn sync_codex_provider_writes_auth_and_config() {
 
     let mut config = MultiAppConfig::default();
 
-    // 添加入测 MCP 启用项，确保 sync_enabled_to_codex 会写入 TOML
-    config.mcp.codex.servers.insert(
-        "echo-server".into(),
-        json!({
-            "id": "echo-server",
-            "enabled": true,
-            "server": {
-                "type": "stdio",
-                "command": "echo",
-                "args": ["hello"]
-            }
-        }),
-    );
+    // 注意：v3.7.0 后 MCP 同步由 McpService 独立处理，不再通过 provider 切换触发
+    // 此测试仅验证 auth.json 和 config.toml 基础配置的写入
 
     let provider_config = json!({
         "auth": {
@@ -133,9 +122,10 @@ fn sync_codex_provider_writes_auth_and_config() {
     );
 
     let toml_text = fs::read_to_string(&config_path).expect("read config.toml");
+    // 验证基础配置正确写入
     assert!(
-        toml_text.contains("command = \"echo\""),
-        "config.toml should contain serialized enabled MCP server"
+        toml_text.contains("base_url"),
+        "config.toml should contain base_url from provider config"
     );
 
     // 当前供应商应同步最新 config 文本
@@ -154,6 +144,12 @@ fn sync_enabled_to_codex_writes_enabled_servers() {
     let _guard = test_mutex().lock().expect("acquire test mutex");
     reset_test_fs();
 
+    // 模拟 Codex 已安装/已初始化：存在 ~/.codex 目录
+    let path = cc_switch_lib::get_codex_config_path();
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).expect("create codex dir");
+    }
+
     let mut config = MultiAppConfig::default();
     config.mcp.codex.servers.insert(
         "stdio-enabled".into(),
@@ -170,7 +166,6 @@ fn sync_enabled_to_codex_writes_enabled_servers() {
 
     cc_switch_lib::sync_enabled_to_codex(&config).expect("sync codex");
 
-    let path = cc_switch_lib::get_codex_config_path();
     assert!(path.exists(), "config.toml should be created");
     let text = fs::read_to_string(&path).expect("read config.toml");
     assert!(
@@ -558,6 +553,7 @@ command = "echo"
                 claude: false,
                 codex: false, // 初始未启用
                 gemini: false,
+                opencode: false,
             },
             description: None,
             homepage: None,
@@ -594,6 +590,11 @@ command = "echo"
 fn sync_claude_enabled_mcp_projects_to_user_config() {
     let _guard = test_mutex().lock().expect("acquire test mutex");
     reset_test_fs();
+    let home = ensure_test_home();
+
+    // 模拟 Claude 已安装/已初始化：存在 ~/.claude 目录
+    fs::create_dir_all(home.join(".claude")).expect("create claude dir");
+
     let mut config = MultiAppConfig::default();
 
     config.mcp.claude.servers.insert(
@@ -680,6 +681,7 @@ fn import_from_claude_merges_into_config() {
                 claude: false, // 初始未启用
                 codex: false,
                 gemini: false,
+                opencode: false,
             },
             description: None,
             homepage: None,
@@ -969,12 +971,18 @@ fn export_sql_returns_error_for_invalid_path() {
 
     let state = create_test_state().expect("create test state");
 
-    // Try to export to an invalid path (parent directory doesn't exist)
-    let invalid_path = PathBuf::from("/nonexistent/directory/export.sql");
+    // Try to export to an invalid path (nonexistent parent or invalid name on Windows)
+    let invalid_parent = if cfg!(windows) {
+        std::env::temp_dir().join("cc-switch-test-invalid<>dir")
+    } else {
+        PathBuf::from("/nonexistent/directory")
+    };
+    let invalid_path = invalid_parent.join("export.sql");
     let err = state
         .db
         .export_sql(&invalid_path)
         .expect_err("export to invalid path should fail");
+    let invalid_prefix = invalid_parent.to_string_lossy();
 
     // The error can be either IoContext or Io depending on where it fails
     match err {
@@ -986,10 +994,83 @@ fn export_sql_returns_error_for_invalid_path() {
         }
         AppError::Io { path, .. } => {
             assert!(
-                path.starts_with("/nonexistent"),
-                "expected error for /nonexistent path, got: {path:?}"
+                path.starts_with(invalid_prefix.as_ref()),
+                "expected error for {invalid_parent:?}, got: {path:?}"
             );
         }
         other => panic!("expected IoContext or Io error, got {other:?}"),
     }
+}
+
+#[test]
+fn import_sql_rejects_non_cc_switch_backup() {
+    let _guard = test_mutex().lock().expect("acquire test mutex");
+    reset_test_fs();
+    let home = ensure_test_home();
+
+    let state = create_test_state().expect("create test state");
+
+    let import_path = home.join("not-cc-switch.sql");
+    fs::write(&import_path, "CREATE TABLE x (id INTEGER);").expect("write import sql");
+
+    let err = state
+        .db
+        .import_sql(&import_path)
+        .expect_err("non-cc-switch sql should be rejected");
+
+    match err {
+        AppError::Localized { key, .. } => {
+            assert_eq!(key, "backup.sql.invalid_format");
+        }
+        other => panic!("expected Localized error, got {other:?}"),
+    }
+}
+
+#[test]
+fn import_sql_accepts_cc_switch_exported_backup() {
+    let _guard = test_mutex().lock().expect("acquire test mutex");
+    reset_test_fs();
+    let home = ensure_test_home();
+
+    // Create a database with some data and export it.
+    let mut config = MultiAppConfig::default();
+    {
+        let manager = config
+            .get_manager_mut(&AppType::Claude)
+            .expect("claude manager");
+        manager.current = "test-provider".to_string();
+        manager.providers.insert(
+            "test-provider".to_string(),
+            Provider::with_id(
+                "test-provider".to_string(),
+                "Test Provider".to_string(),
+                json!({"env": {"ANTHROPIC_API_KEY": "test-key"}}),
+                None,
+            ),
+        );
+    }
+
+    let state = create_test_state_with_config(&config).expect("create test state");
+    let export_path = home.join("cc-switch-export.sql");
+    state
+        .db
+        .export_sql(&export_path)
+        .expect("export should succeed");
+
+    // Reset database, then import into a fresh one.
+    reset_test_fs();
+    let state = create_test_state().expect("create test state");
+    state
+        .db
+        .import_sql(&export_path)
+        .expect("import should succeed");
+
+    let providers = state
+        .db
+        .get_all_providers(AppType::Claude.as_str())
+        .expect("load providers");
+    assert!(
+        providers.contains_key("test-provider"),
+        "imported providers should contain test-provider"
+    );
 }

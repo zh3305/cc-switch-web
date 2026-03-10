@@ -52,6 +52,12 @@ pub enum AppError {
     },
     #[error("数据库错误: {0}")]
     Database(String),
+    #[error("OMO 配置文件不存在")]
+    OmoConfigNotFound,
+    #[error("所有供应商已熔断，无可用渠道")]
+    AllProvidersCircuitOpen,
+    #[error("未配置供应商")]
+    NoProvidersConfigured,
 }
 
 impl AppError {
@@ -91,9 +97,24 @@ impl<T> From<PoisonError<T>> for AppError {
     }
 }
 
+impl From<rusqlite::Error> for AppError {
+    fn from(err: rusqlite::Error) -> Self {
+        Self::Database(err.to_string())
+    }
+}
+
 impl From<AppError> for String {
     fn from(err: AppError) -> Self {
         err.to_string()
+    }
+}
+
+impl serde::Serialize for AppError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
     }
 }
 

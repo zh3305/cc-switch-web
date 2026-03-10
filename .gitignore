@@ -8,7 +8,7 @@ release/
 *.tsbuildinfo
 .npmrc
 CLAUDE.md
-AGENTS.md
+# AGENTS.md
 GEMINI.md
 /.claude
 /.codex
@@ -21,3 +21,10 @@ crates/server/target
 crates/core/target
 release-web
 nul
+
+# Flatpak build artifacts
+flatpak/cc-switch.deb
+flatpak-build/
+flatpak-repo/
+.worktrees/
+.spec-workflow/

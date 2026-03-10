@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 
-use cc_switch_lib::{update_settings, AppSettings, AppState, Database, MultiAppConfig};
+use cc_switch_lib::{
+    update_settings, AppSettings, AppState, Database, MultiAppConfig, ProxyService,
+};
 
 /// 为测试设置隔离的 HOME 目录，避免污染真实用户数据。
 pub fn ensure_test_home() -> &'static Path {
@@ -12,6 +14,9 @@ pub fn ensure_test_home() -> &'static Path {
             let _ = std::fs::remove_dir_all(&base);
         }
         std::fs::create_dir_all(&base).expect("create test home");
+        // Windows 上 `dirs::home_dir()` 不受 HOME/USERPROFILE 影响（走 Known Folder API），
+        // 用 CC_SWITCH_TEST_HOME 显式覆盖，以确保测试不会污染真实用户目录。
+        std::env::set_var("CC_SWITCH_TEST_HOME", &base);
         std::env::set_var("HOME", &base);
         #[cfg(windows)]
         std::env::set_var("USERPROFILE", &base);
@@ -47,16 +52,20 @@ pub fn test_mutex() -> &'static Mutex<()> {
 }
 
 /// 创建测试用的 AppState，包含一个空的数据库
+#[allow(dead_code)]
 pub fn create_test_state() -> Result<AppState, Box<dyn std::error::Error>> {
-    let db = Database::init()?;
-    Ok(AppState { db: Arc::new(db) })
+    let db = Arc::new(Database::init()?);
+    let proxy_service = ProxyService::new(db.clone());
+    Ok(AppState { db, proxy_service })
 }
 
 /// 创建测试用的 AppState，并从 MultiAppConfig 迁移数据
+#[allow(dead_code)]
 pub fn create_test_state_with_config(
     config: &MultiAppConfig,
 ) -> Result<AppState, Box<dyn std::error::Error>> {
-    let db = Database::init()?;
+    let db = Arc::new(Database::init()?);
     db.migrate_from_json(config)?;
-    Ok(AppState { db: Arc::new(db) })
+    let proxy_service = ProxyService::new(db.clone());
+    Ok(AppState { db, proxy_service })
 }
