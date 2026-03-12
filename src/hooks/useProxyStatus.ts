@@ -13,6 +13,15 @@ import type {
 } from "@/types/proxy";
 import { extractErrorMessage } from "@/utils/errorUtils";
 
+function fillMessageTemplate(
+  message: string,
+  values: Record<string, string>,
+): string {
+  return Object.entries(values).reduce((result, [key, value]) => {
+    return result.split(`{{${key}}}`).join(value);
+  }, message);
+}
+
 /**
  * 代理服务状态管理
  */
@@ -53,10 +62,12 @@ export function useProxyStatus() {
       const detail =
         extractErrorMessage(error) ||
         t("common.unknown", { defaultValue: "未知错误" });
+      const message = t("proxy.server.startFailed", {
+        detail,
+        defaultValue: `启动代理服务失败: ${detail}`,
+      });
       toast.error(
-        t("proxy.server.startFailed", {
-          defaultValue: `启动代理服务失败: ${detail}`,
-        }),
+        fillMessageTemplate(message, { detail }),
       );
     },
   });
@@ -83,10 +94,12 @@ export function useProxyStatus() {
       const detail =
         extractErrorMessage(error) ||
         t("common.unknown", { defaultValue: "未知错误" });
+      const message = t("proxy.stopWithRestoreFailed", {
+        detail,
+        defaultValue: `停止失败: ${detail}`,
+      });
       toast.error(
-        t("proxy.stopWithRestoreFailed", {
-          defaultValue: `停止失败: ${detail}`,
-        }),
+        fillMessageTemplate(message, { detail }),
       );
     },
   });
@@ -125,10 +138,12 @@ export function useProxyStatus() {
       const detail =
         extractErrorMessage(error) ||
         t("common.unknown", { defaultValue: "未知错误" });
+      const message = t("proxy.takeover.failed", {
+        detail,
+        defaultValue: `操作失败: ${detail}`,
+      });
       toast.error(
-        t("proxy.takeover.failed", {
-          defaultValue: `操作失败: ${detail}`,
-        }),
+        fillMessageTemplate(message, { detail }),
       );
     },
   });
@@ -149,11 +164,12 @@ export function useProxyStatus() {
       const detail =
         extractErrorMessage(error) ||
         t("common.unknown", { defaultValue: "未知错误" });
+      const message = t("proxy.switchFailed", {
+        error: detail,
+        defaultValue: `切换失败: ${detail}`,
+      });
       toast.error(
-        t("proxy.switchFailed", {
-          error: detail,
-          defaultValue: `切换失败: ${detail}`,
-        }),
+        fillMessageTemplate(message, { error: detail }),
       );
     },
   });

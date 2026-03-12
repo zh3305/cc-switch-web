@@ -2,7 +2,19 @@ use std::sync::Arc;
 
 use serde_json::Value;
 
-use crate::{auth::verify_password, rpc::RpcError, ServerState};
+use crate::{auth::verify_password, events::ServerEvent, rpc::RpcError, ServerState};
+
+fn get_str_param<'a>(params: &'a Value, keys: &[&str]) -> Result<&'a str, RpcError> {
+    keys.iter()
+        .find_map(|key| params.get(*key).and_then(|v| v.as_str()))
+        .ok_or_else(|| RpcError::invalid_params(format!("missing '{}' field", keys[0])))
+}
+
+fn get_bool_param(params: &Value, keys: &[&str]) -> Result<bool, RpcError> {
+    keys.iter()
+        .find_map(|key| params.get(*key).and_then(|v| v.as_bool()))
+        .ok_or_else(|| RpcError::invalid_params(format!("missing '{}' field", keys[0])))
+}
 
 /// Dispatch a command to the appropriate handler
 pub async fn dispatch_command(
@@ -280,6 +292,445 @@ pub async fn dispatch_command(
                 .ok_or_else(|| RpcError::invalid_params("missing 'url' field"))?;
 
             cc_switch_core::update_endpoint_last_used(core, app, provider_id, url.to_string())
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        // Proxy commands
+        "start_proxy_server" => {
+            let info = core
+                .app_state()
+                .proxy_service
+                .start()
+                .await
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(info).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "stop_proxy_with_restore" => {
+            core.app_state()
+                .proxy_service
+                .stop_with_restore()
+                .await
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "get_proxy_takeover_status" => {
+            let status = core
+                .app_state()
+                .proxy_service
+                .get_takeover_status()
+                .await
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(status).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "set_proxy_takeover_for_app" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+            let enabled = get_bool_param(params, &["enabled"])?;
+
+            core.app_state()
+                .proxy_service
+                .set_takeover_for_app(app_type, enabled)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "get_proxy_status" => {
+            let status = core
+                .app_state()
+                .proxy_service
+                .get_status()
+                .await
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(status).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_proxy_config" => {
+            let config = core
+                .app_state()
+                .proxy_service
+                .get_config()
+                .await
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(config).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "update_proxy_config" => {
+            let config_value = params
+                .get("config")
+                .ok_or_else(|| RpcError::invalid_params("missing 'config' field"))?;
+
+            let config = serde_json::from_value(config_value.clone())
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'config' value: {e}")))?;
+
+            core.app_state()
+                .proxy_service
+                .update_config(&config)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "get_global_proxy_config" => {
+            let config = core
+                .app_state()
+                .db
+                .get_global_proxy_config()
+                .await
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(config).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "update_global_proxy_config" => {
+            let config_value = params
+                .get("config")
+                .ok_or_else(|| RpcError::invalid_params("missing 'config' field"))?;
+
+            let config = serde_json::from_value(config_value.clone())
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'config' value: {e}")))?;
+
+            core.app_state()
+                .db
+                .update_global_proxy_config(config)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "get_proxy_config_for_app" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+
+            let config = core
+                .app_state()
+                .db
+                .get_proxy_config_for_app(app_type)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(config).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "update_proxy_config_for_app" => {
+            let config_value = params
+                .get("config")
+                .ok_or_else(|| RpcError::invalid_params("missing 'config' field"))?;
+
+            let config = serde_json::from_value(config_value.clone())
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'config' value: {e}")))?;
+
+            core.app_state()
+                .db
+                .update_proxy_config_for_app(config)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "is_proxy_running" => Ok(serde_json::json!(core.app_state().proxy_service.is_running().await)),
+
+        "is_live_takeover_active" => {
+            let active = core
+                .app_state()
+                .proxy_service
+                .is_takeover_active()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(active))
+        }
+
+        "switch_proxy_provider" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+
+            core.app_state()
+                .proxy_service
+                .switch_proxy_target(app_type, provider_id)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            let _ = state.event_bus.send(ServerEvent {
+                name: "provider-switched".to_string(),
+                payload: serde_json::json!({
+                    "appType": app_type,
+                    "providerId": provider_id,
+                    "source": "webProxySwitch"
+                }),
+            });
+
+            Ok(Value::Null)
+        }
+
+        "get_provider_health" => {
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+
+            let health = core
+                .app_state()
+                .db
+                .get_provider_health(provider_id, app_type)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(health).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "reset_circuit_breaker" => {
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+
+            core.app_state()
+                .db
+                .update_provider_health(provider_id, app_type, true, None)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            core.app_state()
+                .proxy_service
+                .reset_provider_circuit_breaker(provider_id, app_type)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "get_circuit_breaker_config" => {
+            let config = core
+                .app_state()
+                .db
+                .get_circuit_breaker_config()
+                .await
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(config).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "update_circuit_breaker_config" => {
+            let config_value = params
+                .get("config")
+                .ok_or_else(|| RpcError::invalid_params("missing 'config' field"))?;
+
+            let config = serde_json::from_value(config_value.clone())
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'config' value: {e}")))?;
+
+            core.app_state()
+                .db
+                .update_circuit_breaker_config(&config)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            core.app_state()
+                .proxy_service
+                .update_circuit_breaker_configs(config)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "get_circuit_breaker_stats" => Ok(Value::Null),
+
+        "get_failover_queue" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+
+            let queue = core
+                .app_state()
+                .db
+                .get_failover_queue(app_type)
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(queue).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_available_providers_for_failover" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+
+            let providers = core
+                .app_state()
+                .db
+                .get_available_providers_for_failover(app_type)
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(providers).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "add_to_failover_queue" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+
+            core.app_state()
+                .db
+                .add_to_failover_queue(app_type, provider_id)
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "remove_from_failover_queue" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+
+            core.app_state()
+                .db
+                .remove_from_failover_queue(app_type, provider_id)
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "get_auto_failover_enabled" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+
+            let enabled = core
+                .app_state()
+                .db
+                .get_proxy_config_for_app(app_type)
+                .await
+                .map(|config| config.auto_failover_enabled)
+                .map_err(RpcError::app_error)?;
+
+            Ok(serde_json::json!(enabled))
+        }
+
+        "set_auto_failover_enabled" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+            let enabled = get_bool_param(params, &["enabled"])?;
+
+            let p1_provider_id = if enabled {
+                let mut queue = core
+                    .app_state()
+                    .db
+                    .get_failover_queue(app_type)
+                    .map_err(RpcError::app_error)?;
+
+                if queue.is_empty() {
+                    let current_id = core
+                        .app_state()
+                        .db
+                        .get_current_provider(app_type)
+                        .map_err(RpcError::app_error)?
+                        .ok_or_else(|| {
+                            RpcError::app_error(
+                                "故障转移队列为空，且未设置当前供应商，无法开启故障转移",
+                            )
+                        })?;
+
+                    core.app_state()
+                        .db
+                        .add_to_failover_queue(app_type, &current_id)
+                        .map_err(RpcError::app_error)?;
+
+                    queue = core
+                        .app_state()
+                        .db
+                        .get_failover_queue(app_type)
+                        .map_err(RpcError::app_error)?;
+                }
+
+                Some(
+                    queue
+                        .first()
+                        .map(|item| item.provider_id.clone())
+                        .ok_or_else(|| RpcError::app_error("故障转移队列为空，无法开启故障转移"))?,
+                )
+            } else {
+                None
+            };
+
+            let mut config = core
+                .app_state()
+                .db
+                .get_proxy_config_for_app(app_type)
+                .await
+                .map_err(RpcError::app_error)?;
+            config.auto_failover_enabled = enabled;
+
+            core.app_state()
+                .db
+                .update_proxy_config_for_app(config)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            if let Some(provider_id) = p1_provider_id {
+                core.app_state()
+                    .proxy_service
+                    .switch_proxy_target(app_type, &provider_id)
+                    .await
+                    .map_err(RpcError::app_error)?;
+
+                let _ = state.event_bus.send(ServerEvent {
+                    name: "provider-switched".to_string(),
+                    payload: serde_json::json!({
+                        "appType": app_type,
+                        "providerId": provider_id,
+                        "source": "failoverEnabled"
+                    }),
+                });
+            }
+
+            Ok(Value::Null)
+        }
+
+        "get_default_cost_multiplier" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+
+            let value = core
+                .app_state()
+                .db
+                .get_default_cost_multiplier(app_type)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            Ok(serde_json::json!(value))
+        }
+
+        "set_default_cost_multiplier" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+            let value = get_str_param(params, &["value"])?;
+
+            core.app_state()
+                .db
+                .set_default_cost_multiplier(app_type, value)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "get_pricing_model_source" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+
+            let value = core
+                .app_state()
+                .db
+                .get_pricing_model_source(app_type)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            Ok(serde_json::json!(value))
+        }
+
+        "set_pricing_model_source" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+            let value = get_str_param(params, &["value"])?;
+
+            core.app_state()
+                .db
+                .set_pricing_model_source(app_type, value)
+                .await
                 .map_err(RpcError::app_error)?;
 
             Ok(Value::Null)

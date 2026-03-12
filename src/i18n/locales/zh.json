@@ -1803,7 +1803,7 @@
       "hint": "选择要接管的应用，启用后该应用的请求将通过本地代理转发",
       "enabled": "{{app}} 接管已启用",
       "disabled": "{{app}} 接管已关闭",
-      "failed": "切换接管状态失败",
+      "failed": "切换接管状态失败: {{detail}}",
       "tooltip": {
         "active": "{{appLabel}} 已接管 - {{address}}:{{port}}\n切换该应用供应商为热切换",
         "broken": "{{appLabel}} 已接管，但代理服务未运行",

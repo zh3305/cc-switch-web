@@ -1803,7 +1803,7 @@
       "hint": "Select apps to take over — once enabled, requests from that app will be routed through the local proxy",
       "enabled": "{{app}} takeover enabled",
       "disabled": "{{app}} takeover disabled",
-      "failed": "Failed to toggle takeover",
+      "failed": "Failed to toggle takeover: {{detail}}",
       "tooltip": {
         "active": "{{appLabel}} is intercepting - {{address}}:{{port}}\nSwitch provider for hot switching",
         "broken": "{{appLabel}} is intercepting, but proxy service is not running",
