@@ -28,40 +28,67 @@ mod store;
 mod tray;
 mod usage_script;
 
-pub use app_config::{AppType, McpApps, McpServer, MultiAppConfig};
+pub use app_config::{AppType, InstalledSkill, McpApps, McpServer, MultiAppConfig, UnmanagedSkill};
 pub use codex_config::{
     get_codex_auth_path, get_codex_config_dir, get_codex_config_path, write_codex_live_atomic,
 };
 pub use commands::open_provider_terminal;
-pub use commands::*;
 pub use commands::ModelPricingInfo;
-pub use config::{get_app_config_dir, get_app_config_path, get_claude_config_dir, get_claude_mcp_path, get_claude_settings_path, read_json_file};
+pub use commands::*;
+pub use config::{
+    get_app_config_dir, get_app_config_path, get_claude_config_dir,
+    get_claude_config_status as get_claude_config_status_sync, get_claude_mcp_path,
+    get_claude_settings_path, read_json_file, write_text_file, ConfigStatus,
+};
+pub use database::backup::BackupEntry;
 pub use database::Database;
 pub use deeplink::{
     import_mcp_from_deeplink, import_prompt_from_deeplink, import_provider_from_deeplink,
     import_skill_from_deeplink, parse_and_merge_config, parse_deeplink_url, DeepLinkImportRequest,
 };
-pub use prompt::Prompt;
-pub use services::env_checker::{check_env_conflicts, EnvConflict};
-pub use services::env_manager::{delete_env_vars, restore_from_backup, BackupInfo};
-pub use services::stream_check::{HealthStatus, StreamCheckConfig, StreamCheckResult, StreamCheckService};
-pub use services::usage_stats::{
-    DailyStats, LogFilters, ModelStats, PaginatedLogs, ProviderLimitStatus, ProviderStats,
-    RequestLogDetail, UsageSummary,
-};
 pub use error::AppError;
+pub use init_status::SkillsMigrationPayload;
 pub use mcp::{
     import_from_claude, import_from_codex, import_from_gemini, remove_server_from_claude,
     remove_server_from_codex, remove_server_from_gemini, sync_enabled_to_claude,
     sync_enabled_to_codex, sync_enabled_to_gemini, sync_single_server_to_claude,
     sync_single_server_to_codex, sync_single_server_to_gemini,
 };
-pub use provider::{Provider, ProviderMeta};
+pub use prompt::Prompt;
+pub use provider::{Provider, ProviderMeta, UniversalProvider};
+pub use proxy::http_client::{
+    apply_proxy as apply_global_proxy, get_current_proxy_url as get_current_global_proxy_url,
+    validate_proxy as validate_global_proxy,
+};
+pub use proxy::types::{LogConfig, OptimizerConfig, RectifierConfig};
+pub use services::env_checker::{check_env_conflicts, EnvConflict};
+pub use services::env_manager::{delete_env_vars, restore_from_backup, BackupInfo};
+pub use services::omo::{OmoLocalFileData, OmoService, SLIM as OMO_SLIM, STANDARD as OMO_STANDARD};
+pub use services::provider::{
+    import_openclaw_providers_from_live, import_opencode_providers_from_live,
+};
+pub use services::skill::{DiscoverableSkill, Skill, SkillRepo};
+pub use services::stream_check::{
+    HealthStatus, StreamCheckConfig, StreamCheckResult, StreamCheckService,
+};
+pub use services::usage_stats::{
+    DailyStats, LogFilters, ModelStats, PaginatedLogs, ProviderLimitStatus, ProviderStats,
+    RequestLogDetail, UsageSummary,
+};
+pub use services::webdav_sync::{
+    check_connection as webdav_check_connection, download as webdav_download,
+    fetch_remote_info as webdav_fetch_remote_info, run_with_sync_lock as webdav_run_with_sync_lock,
+    sync_mutex as webdav_sync_mutex, upload as webdav_upload,
+};
 pub use services::{
     ConfigService, EndpointLatency, McpService, PromptService, ProviderService, ProxyService,
     SkillService, SpeedtestService,
 };
-pub use settings::{get_settings, reload_settings, update_settings, AppSettings};
+pub use session_manager::{SessionMessage, SessionMeta};
+pub use settings::{
+    get_settings, get_webdav_sync_settings, reload_settings, set_webdav_sync_settings,
+    update_settings, update_webdav_sync_status, AppSettings, WebDavSyncSettings,
+};
 pub use store::AppState;
 
 pub const WEB_COMPAT_TAURI_COMMANDS: &[&str] = &[
@@ -88,10 +115,23 @@ pub const WEB_COMPAT_TAURI_COMMANDS: &[&str] = &[
     "read_live_provider_settings",
     "get_settings",
     "save_settings",
+    "get_rectifier_config",
+    "set_rectifier_config",
+    "get_optimizer_config",
+    "set_optimizer_config",
+    "get_log_config",
+    "set_log_config",
+    "get_claude_config_status",
+    "get_config_status",
     "restart_app",
     "check_for_updates",
     "is_portable_mode",
+    "get_claude_plugin_status",
+    "read_claude_plugin_config",
     "apply_claude_plugin_config",
+    "is_claude_plugin_applied",
+    "apply_claude_onboarding_skip",
+    "clear_claude_onboarding_skip",
     "get_claude_mcp_status",
     "read_claude_mcp_config",
     "upsert_claude_mcp_server",
@@ -125,17 +165,96 @@ pub const WEB_COMPAT_TAURI_COMMANDS: &[&str] = &[
     "import_config_from_file",
     "save_file_dialog",
     "open_file_dialog",
+    "open_zip_file_dialog",
     "sync_current_providers_live",
+    "create_db_backup",
+    "list_db_backups",
+    "restore_db_backup",
+    "rename_db_backup",
+    "delete_db_backup",
+    "webdav_test_connection",
+    "webdav_sync_upload",
+    "webdav_sync_download",
+    "webdav_sync_save_settings",
+    "webdav_sync_fetch_remote_info",
     "parse_deeplink",
     "merge_deeplink_config",
+    "import_from_deeplink",
     "import_from_deeplink_unified",
     "update_tray_menu",
     "check_env_conflicts",
     "delete_env_vars",
     "restore_env_backup",
     "get_skills",
+    "get_installed_skills",
+    "discover_available_skills",
+    "get_skills_for_app",
+    "install_skill",
+    "install_skill_for_app",
+    "uninstall_skill",
+    "uninstall_skill_for_app",
+    "install_skill_unified",
+    "uninstall_skill_unified",
+    "toggle_skill_app",
+    "scan_unmanaged_skills",
+    "import_skills_from_apps",
+    "get_skill_repos",
+    "add_skill_repo",
+    "remove_skill_repo",
+    "install_skills_from_zip",
     "set_auto_launch",
     "get_auto_launch_status",
+    "get_universal_providers",
+    "get_universal_provider",
+    "upsert_universal_provider",
+    "delete_universal_provider",
+    "sync_universal_provider",
+    "list_sessions",
+    "get_session_messages",
+    "launch_session_terminal",
+    "delete_session",
+    "extract_common_config_snippet",
+    "get_skills_migration_result",
+    "get_tool_versions",
+    "remove_provider_from_live_config",
+    "import_mcp_from_apps",
+    "import_openclaw_providers_from_live",
+    "get_openclaw_live_provider_ids",
+    "get_openclaw_live_provider",
+    "scan_openclaw_config_health",
+    "get_openclaw_default_model",
+    "set_openclaw_default_model",
+    "get_openclaw_model_catalog",
+    "set_openclaw_model_catalog",
+    "get_openclaw_agents_defaults",
+    "set_openclaw_agents_defaults",
+    "get_openclaw_env",
+    "set_openclaw_env",
+    "get_openclaw_tools",
+    "set_openclaw_tools",
+    "get_global_proxy_url",
+    "set_global_proxy_url",
+    "test_proxy_url",
+    "get_upstream_proxy_status",
+    "scan_local_proxies",
+    "set_window_theme",
+    "read_omo_local_file",
+    "get_current_omo_provider_id",
+    "disable_current_omo",
+    "read_omo_slim_local_file",
+    "get_current_omo_slim_provider_id",
+    "disable_current_omo_slim",
+    "import_opencode_providers_from_live",
+    "get_opencode_live_provider_ids",
+    "open_provider_terminal",
+    "read_workspace_file",
+    "write_workspace_file",
+    "list_daily_memory_files",
+    "read_daily_memory_file",
+    "write_daily_memory_file",
+    "delete_daily_memory_file",
+    "search_daily_memory_files",
+    "open_workspace_directory",
     "start_proxy_server",
     "stop_proxy_with_restore",
     "get_proxy_takeover_status",
@@ -182,20 +301,27 @@ pub const WEB_COMPAT_TAURI_COMMANDS: &[&str] = &[
 ];
 
 // Re-export claude_plugin functions for web server use
-pub use claude_plugin::{clear_claude_config, write_claude_config};
+pub use claude_plugin::{
+    claude_config_status, clear_claude_config, is_claude_config_applied, read_claude_config,
+    write_claude_config,
+};
 
 // Re-export claude_mcp functions for web server use
 pub use claude_mcp::{
-    delete_mcp_server as delete_claude_mcp_server_raw,
+    clear_has_completed_onboarding, delete_mcp_server as delete_claude_mcp_server_raw,
     get_mcp_status as get_claude_mcp_status_raw, read_mcp_json as read_claude_mcp_config_raw,
-    upsert_mcp_server as upsert_claude_mcp_server_raw,
+    set_has_completed_onboarding, upsert_mcp_server as upsert_claude_mcp_server_raw,
     validate_command_in_path as validate_mcp_command_raw, McpStatus,
 };
 
 // Re-export gemini_config functions for web server use
-pub use gemini_config::get_gemini_dir;
-pub use openclaw_config::get_openclaw_dir;
-pub use opencode_config::get_opencode_dir;
+pub use gemini_config::{get_gemini_dir, get_gemini_env_path};
+pub use openclaw_config::{
+    get_openclaw_config_path, get_openclaw_dir, OpenClawAgentsDefaults, OpenClawDefaultModel,
+    OpenClawEnvConfig, OpenClawHealthWarning, OpenClawModelCatalogEntry, OpenClawToolsConfig,
+    OpenClawWriteOutcome,
+};
+pub use opencode_config::{get_opencode_config_path, get_opencode_dir};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 

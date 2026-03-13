@@ -1,10 +1,52 @@
 use std::collections::BTreeSet;
+use std::fs;
+use std::path::PathBuf;
 
 use cc_switch_core::WEB_COMPAT_TAURI_COMMANDS;
 use cc_switch_server::api::{PUBLIC_METHODS, RPC_BUSINESS_METHODS, WS_PROTOCOL_METHODS};
 
 fn sorted_set<'a>(items: &'a [&'a str]) -> BTreeSet<&'a str> {
     items.iter().copied().collect()
+}
+
+fn dispatch_match_methods() -> BTreeSet<String> {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let dispatch_path = manifest_dir.join("src/api/dispatch.rs");
+    let source = fs::read_to_string(&dispatch_path)
+        .unwrap_or_else(|err| panic!("failed to read {}: {err}", dispatch_path.display()));
+
+    let mut methods = BTreeSet::new();
+    let bytes = source.as_bytes();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        if bytes[i] != b'"' {
+            i += 1;
+            continue;
+        }
+
+        let start = i + 1;
+        let mut end = start;
+        while end < bytes.len() && bytes[end] != b'"' {
+            end += 1;
+        }
+        if end >= bytes.len() {
+            break;
+        }
+
+        let mut cursor = end + 1;
+        while cursor < bytes.len() && bytes[cursor].is_ascii_whitespace() {
+            cursor += 1;
+        }
+
+        if cursor + 1 < bytes.len() && bytes[cursor] == b'=' && bytes[cursor + 1] == b'>' {
+            methods.insert(source[start..end].to_string());
+        }
+
+        i = end + 1;
+    }
+
+    methods
 }
 
 #[test]
@@ -63,4 +105,20 @@ fn protocol_method_whitelists_only_reference_live_entries() {
             "WS protocol whitelist contains stale entry {method}"
         );
     }
+}
+
+#[test]
+fn rpc_business_methods_have_real_dispatch_arms() {
+    let dispatch_methods = dispatch_match_methods();
+    let missing_dispatch: Vec<_> = RPC_BUSINESS_METHODS
+        .iter()
+        .copied()
+        .filter(|method| !dispatch_methods.contains(*method))
+        .collect();
+
+    assert!(
+        missing_dispatch.is_empty(),
+        "RPC business methods missing match arms in dispatch.rs: {:?}",
+        missing_dispatch
+    );
 }

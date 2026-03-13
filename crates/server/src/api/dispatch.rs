@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use serde_json::Value;
 
@@ -73,9 +73,19 @@ rpc_business_methods!(
     "set_pricing_model_source",
     "get_settings",
     "save_settings",
+    "get_rectifier_config",
+    "set_rectifier_config",
+    "get_optimizer_config",
+    "set_optimizer_config",
+    "get_log_config",
+    "set_log_config",
+    "get_claude_config_status",
+    "get_config_status",
     "restart_app",
     "check_for_updates",
     "is_portable_mode",
+    "get_claude_plugin_status",
+    "read_claude_plugin_config",
     "get_config_dir",
     "open_config_folder",
     "pick_directory",
@@ -85,15 +95,96 @@ rpc_business_methods!(
     "get_app_config_dir_override",
     "set_app_config_dir_override",
     "apply_claude_plugin_config",
+    "is_claude_plugin_applied",
+    "apply_claude_onboarding_skip",
+    "clear_claude_onboarding_skip",
     "save_file_dialog",
     "open_file_dialog",
+    "open_zip_file_dialog",
     "export_config_to_file",
     "import_config_from_file",
     "sync_current_providers_live",
+    "create_db_backup",
+    "list_db_backups",
+    "restore_db_backup",
+    "rename_db_backup",
+    "delete_db_backup",
     "open_external",
     "set_auto_launch",
     "get_auto_launch_status",
+    "webdav_test_connection",
+    "webdav_sync_upload",
+    "webdav_sync_download",
+    "webdav_sync_save_settings",
+    "webdav_sync_fetch_remote_info",
     "get_skills",
+    "get_installed_skills",
+    "discover_available_skills",
+    "get_skills_for_app",
+    "install_skill",
+    "install_skill_for_app",
+    "uninstall_skill",
+    "uninstall_skill_for_app",
+    "install_skill_unified",
+    "uninstall_skill_unified",
+    "toggle_skill_app",
+    "scan_unmanaged_skills",
+    "import_skills_from_apps",
+    "get_skill_repos",
+    "add_skill_repo",
+    "remove_skill_repo",
+    "install_skills_from_zip",
+    "get_universal_providers",
+    "get_universal_provider",
+    "upsert_universal_provider",
+    "delete_universal_provider",
+    "sync_universal_provider",
+    "list_sessions",
+    "get_session_messages",
+    "launch_session_terminal",
+    "delete_session",
+    "extract_common_config_snippet",
+    "get_skills_migration_result",
+    "get_tool_versions",
+    "remove_provider_from_live_config",
+    "import_mcp_from_apps",
+    "import_openclaw_providers_from_live",
+    "get_openclaw_live_provider_ids",
+    "get_openclaw_live_provider",
+    "scan_openclaw_config_health",
+    "get_openclaw_default_model",
+    "set_openclaw_default_model",
+    "get_openclaw_model_catalog",
+    "set_openclaw_model_catalog",
+    "get_openclaw_agents_defaults",
+    "set_openclaw_agents_defaults",
+    "get_openclaw_env",
+    "set_openclaw_env",
+    "get_openclaw_tools",
+    "set_openclaw_tools",
+    "get_global_proxy_url",
+    "set_global_proxy_url",
+    "test_proxy_url",
+    "get_upstream_proxy_status",
+    "scan_local_proxies",
+    "set_window_theme",
+    "read_omo_local_file",
+    "get_current_omo_provider_id",
+    "disable_current_omo",
+    "read_omo_slim_local_file",
+    "get_current_omo_slim_provider_id",
+    "disable_current_omo_slim",
+    "import_opencode_providers_from_live",
+    "get_opencode_live_provider_ids",
+    "open_provider_terminal",
+    "read_workspace_file",
+    "write_workspace_file",
+    "list_daily_memory_files",
+    "read_daily_memory_file",
+    "write_daily_memory_file",
+    "delete_daily_memory_file",
+    "search_daily_memory_files",
+    "open_workspace_directory",
     "get_mcp_servers",
     "get_claude_mcp_status",
     "read_claude_mcp_config",
@@ -120,6 +211,7 @@ rpc_business_methods!(
     "set_claude_common_config_snippet",
     "get_common_config_snippet",
     "set_common_config_snippet",
+    "import_from_deeplink",
     "parse_deeplink",
     "merge_deeplink_config",
     "import_from_deeplink_unified",
@@ -186,7 +278,10 @@ pub async fn dispatch_command(
 
         // Provider commands
         "get_providers" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let providers =
                 cc_switch_core::get_providers(core, app).map_err(RpcError::app_error)?;
@@ -195,7 +290,10 @@ pub async fn dispatch_command(
         }
 
         "get_current_provider" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let id =
                 cc_switch_core::get_current_provider(core, app).map_err(RpcError::app_error)?;
@@ -204,7 +302,10 @@ pub async fn dispatch_command(
         }
 
         "add_provider" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let provider_value = params
                 .get("provider")
@@ -222,7 +323,10 @@ pub async fn dispatch_command(
         }
 
         "update_provider" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let provider_value = params
                 .get("provider")
@@ -233,53 +337,59 @@ pub async fn dispatch_command(
                     RpcError::invalid_params(format!("invalid 'provider' value: {e}"))
                 })?;
 
-            let ok =
-                cc_switch_core::update_provider(core, app, provider).map_err(RpcError::app_error)?;
+            let ok = cc_switch_core::update_provider(core, app, provider)
+                .map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(ok))
         }
 
         "delete_provider" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let id = params
                 .get("id")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'id' field"))?;
 
-            let ok =
-                cc_switch_core::delete_provider(core, app, id).map_err(RpcError::app_error)?;
+            let ok = cc_switch_core::delete_provider(core, app, id).map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(ok))
         }
 
         "switch_provider" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let id = params
                 .get("id")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'id' field"))?;
 
-            let ok =
-                cc_switch_core::switch_provider(core, app, id).map_err(RpcError::app_error)?;
+            let ok = cc_switch_core::switch_provider(core, app, id).map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(ok))
         }
 
         "import_default_config" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
-            let ok = cc_switch_core::import_default_config(core, app)
-                .map_err(RpcError::app_error)?;
+            let ok =
+                cc_switch_core::import_default_config(core, app).map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(ok))
         }
 
         // Web / server 模式下托盘菜单更新为 no-op，只返回 true
         "update_tray_menu" => {
-            let ok =
-                cc_switch_core::update_tray_menu(core).map_err(RpcError::app_error)?;
+            let ok = cc_switch_core::update_tray_menu(core).map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(ok))
         }
@@ -301,23 +411,28 @@ pub async fn dispatch_command(
         }
 
         "queryProviderUsage" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let provider_id = params
                 .get("providerId")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'providerId' field"))?;
 
-            let usage =
-                cc_switch_core::query_provider_usage(core, app, provider_id)
-                    .await
-                    .map_err(RpcError::app_error)?;
+            let usage = cc_switch_core::query_provider_usage(core, app, provider_id)
+                .await
+                .map_err(RpcError::app_error)?;
 
             Ok(usage)
         }
 
         "testUsageScript" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let provider_id = params
                 .get("providerId")
@@ -355,11 +470,13 @@ pub async fn dispatch_command(
         }
 
         "read_live_provider_settings" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let settings =
-                cc_switch_core::read_live_provider_settings(app)
-                    .map_err(RpcError::app_error)?;
+                cc_switch_core::read_live_provider_settings(app).map_err(RpcError::app_error)?;
 
             Ok(settings)
         }
@@ -369,9 +486,8 @@ pub async fn dispatch_command(
                 .get("urls")
                 .ok_or_else(|| RpcError::invalid_params("missing 'urls' field"))?;
 
-            let urls: Vec<String> = serde_json::from_value(urls_value.clone()).map_err(|e| {
-                RpcError::invalid_params(format!("invalid 'urls' value: {e}"))
-            })?;
+            let urls: Vec<String> = serde_json::from_value(urls_value.clone())
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'urls' value: {e}")))?;
 
             let timeout_secs = params.get("timeoutSecs").and_then(|v| v.as_u64());
 
@@ -383,22 +499,27 @@ pub async fn dispatch_command(
         }
 
         "get_custom_endpoints" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let provider_id = params
                 .get("providerId")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'providerId' field"))?;
 
-            let endpoints =
-                cc_switch_core::get_custom_endpoints(core, app, provider_id)
-                    .map_err(RpcError::app_error)?;
+            let endpoints = cc_switch_core::get_custom_endpoints(core, app, provider_id)
+                .map_err(RpcError::app_error)?;
 
             Ok(endpoints)
         }
 
         "add_custom_endpoint" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let provider_id = params
                 .get("providerId")
@@ -417,7 +538,10 @@ pub async fn dispatch_command(
         }
 
         "remove_custom_endpoint" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let provider_id = params
                 .get("providerId")
@@ -436,7 +560,10 @@ pub async fn dispatch_command(
         }
 
         "update_endpoint_last_used" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let provider_id = params
                 .get("providerId")
@@ -473,15 +600,17 @@ pub async fn dispatch_command(
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
-            let result = cc_switch_core::stream_check_all_providers(core, app_type, proxy_targets_only)
-                .await
-                .map_err(RpcError::app_error)?;
+            let result =
+                cc_switch_core::stream_check_all_providers(core, app_type, proxy_targets_only)
+                    .await
+                    .map_err(RpcError::app_error)?;
 
             serde_json::to_value(result).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "get_stream_check_config" => {
-            let config = cc_switch_core::get_stream_check_config(core).map_err(RpcError::app_error)?;
+            let config =
+                cc_switch_core::get_stream_check_config(core).map_err(RpcError::app_error)?;
 
             serde_json::to_value(config).map_err(|e| RpcError::internal_error(e.to_string()))
         }
@@ -540,8 +669,8 @@ pub async fn dispatch_command(
             let filters: cc_switch_core::LogFilters = serde_json::from_value(filters_value.clone())
                 .map_err(|e| RpcError::invalid_params(format!("invalid 'filters' value: {e}")))?;
             let page = get_optional_u32_param(params, &["page"])?.unwrap_or(0);
-            let page_size = get_optional_u32_param(params, &["pageSize", "page_size"])?
-                .unwrap_or(20);
+            let page_size =
+                get_optional_u32_param(params, &["pageSize", "page_size"])?.unwrap_or(20);
 
             let logs = cc_switch_core::get_request_logs(core, filters, page, page_size)
                 .map_err(RpcError::app_error)?;
@@ -749,7 +878,9 @@ pub async fn dispatch_command(
             Ok(Value::Null)
         }
 
-        "is_proxy_running" => Ok(serde_json::json!(core.app_state().proxy_service.is_running().await)),
+        "is_proxy_running" => Ok(serde_json::json!(
+            core.app_state().proxy_service.is_running().await
+        )),
 
         "is_live_takeover_active" => {
             let active = core
@@ -1048,8 +1179,7 @@ pub async fn dispatch_command(
         // Settings commands
         "get_settings" => {
             let settings = cc_switch_core::get_settings();
-            serde_json::to_value(settings)
-                .map_err(|e| RpcError::internal_error(e.to_string()))
+            serde_json::to_value(settings).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "save_settings" => {
@@ -1064,6 +1194,71 @@ pub async fn dispatch_command(
 
             let ok = cc_switch_core::save_settings(settings).map_err(RpcError::app_error)?;
             Ok(serde_json::json!(ok))
+        }
+
+        "get_rectifier_config" => {
+            let config = cc_switch_core::get_rectifier_config(core).map_err(RpcError::app_error)?;
+            serde_json::to_value(config).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "set_rectifier_config" => {
+            let config_value = params
+                .get("config")
+                .ok_or_else(|| RpcError::invalid_params("missing 'config' field"))?;
+            let config: cc_switch_core::RectifierConfig =
+                serde_json::from_value(config_value.clone()).map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'config' value: {e}"))
+                })?;
+            let ok =
+                cc_switch_core::set_rectifier_config(core, config).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "get_optimizer_config" => {
+            let config = cc_switch_core::get_optimizer_config(core).map_err(RpcError::app_error)?;
+            serde_json::to_value(config).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "set_optimizer_config" => {
+            let config_value = params
+                .get("config")
+                .ok_or_else(|| RpcError::invalid_params("missing 'config' field"))?;
+            let config: cc_switch_core::OptimizerConfig =
+                serde_json::from_value(config_value.clone()).map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'config' value: {e}"))
+                })?;
+            let ok =
+                cc_switch_core::set_optimizer_config(core, config).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "get_log_config" => {
+            let config = cc_switch_core::get_log_config(core).map_err(RpcError::app_error)?;
+            serde_json::to_value(config).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "set_log_config" => {
+            let config_value = params
+                .get("config")
+                .ok_or_else(|| RpcError::invalid_params("missing 'config' field"))?;
+            let config: cc_switch_core::LogConfig = serde_json::from_value(config_value.clone())
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'config' value: {e}")))?;
+            let ok = cc_switch_core::set_log_config(core, config).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "get_claude_config_status" => {
+            let status = cc_switch_core::get_claude_config_status();
+            serde_json::to_value(status).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_config_status" => {
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
+            let status = cc_switch_core::get_config_status(app).map_err(RpcError::app_error)?;
+            serde_json::to_value(status).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "restart_app" => {
@@ -1084,14 +1279,20 @@ pub async fn dispatch_command(
         }
 
         "get_config_dir" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
             let dir = cc_switch_core::get_config_dir(app).map_err(RpcError::app_error)?;
             Ok(serde_json::json!(dir))
         }
 
         "open_config_folder" => {
             // Stub for web server - returns path for client to handle
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
             let path = cc_switch_core::open_config_folder(app).map_err(RpcError::app_error)?;
             Ok(serde_json::json!({ "path": path }))
         }
@@ -1125,8 +1326,8 @@ pub async fn dispatch_command(
 
         "set_app_config_dir_override" => {
             let path = params.get("path").and_then(|v| v.as_str());
-            let ok = cc_switch_core::set_app_config_dir_override(path)
-                .map_err(RpcError::app_error)?;
+            let ok =
+                cc_switch_core::set_app_config_dir_override(path).map_err(RpcError::app_error)?;
             Ok(serde_json::json!(ok))
         }
 
@@ -1140,6 +1341,41 @@ pub async fn dispatch_command(
             Ok(serde_json::json!(ok))
         }
 
+        "get_claude_plugin_status" => {
+            let status = cc_switch_core::get_claude_plugin_status()
+                .await
+                .map_err(RpcError::app_error)?;
+            serde_json::to_value(status).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "read_claude_plugin_config" => {
+            let content = cc_switch_core::read_claude_plugin_config()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(content))
+        }
+
+        "is_claude_plugin_applied" => {
+            let applied = cc_switch_core::is_claude_plugin_applied()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(applied))
+        }
+
+        "apply_claude_onboarding_skip" => {
+            let ok = cc_switch_core::apply_claude_onboarding_skip()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "clear_claude_onboarding_skip" => {
+            let ok = cc_switch_core::clear_claude_onboarding_skip()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
         "save_file_dialog" => {
             // Stub for web server - not applicable
             let result = cc_switch_core::save_file_dialog().map_err(RpcError::app_error)?;
@@ -1149,6 +1385,11 @@ pub async fn dispatch_command(
         "open_file_dialog" => {
             // Stub for web server - not applicable
             let result = cc_switch_core::open_file_dialog().map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(result))
+        }
+
+        "open_zip_file_dialog" => {
+            let result = cc_switch_core::open_zip_file_dialog().map_err(RpcError::app_error)?;
             Ok(serde_json::json!(result))
         }
 
@@ -1175,9 +1416,40 @@ pub async fn dispatch_command(
         }
 
         "sync_current_providers_live" => {
-            let result = cc_switch_core::sync_current_providers_live(core)
-                .map_err(RpcError::app_error)?;
+            let result =
+                cc_switch_core::sync_current_providers_live(core).map_err(RpcError::app_error)?;
             Ok(result)
+        }
+
+        "create_db_backup" => {
+            let backup = cc_switch_core::create_db_backup(core).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(backup))
+        }
+
+        "list_db_backups" => {
+            let backups = cc_switch_core::list_db_backups().map_err(RpcError::app_error)?;
+            serde_json::to_value(backups).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "restore_db_backup" => {
+            let filename = get_str_param(params, &["filename"])?;
+            let result =
+                cc_switch_core::restore_db_backup(core, filename).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(result))
+        }
+
+        "rename_db_backup" => {
+            let old_filename = get_str_param(params, &["oldFilename", "old_filename"])?;
+            let new_name = get_str_param(params, &["newName", "new_name"])?;
+            let result = cc_switch_core::rename_db_backup(old_filename, new_name)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(result))
+        }
+
+        "delete_db_backup" => {
+            let filename = get_str_param(params, &["filename"])?;
+            cc_switch_core::delete_db_backup(filename).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(null))
         }
 
         "open_external" => {
@@ -1207,6 +1479,613 @@ pub async fn dispatch_command(
             Ok(serde_json::json!(status))
         }
 
+        "webdav_test_connection" => {
+            let settings_value = params
+                .get("settings")
+                .ok_or_else(|| RpcError::invalid_params("missing 'settings' field"))?;
+            let settings: cc_switch_core::WebDavSyncSettings =
+                serde_json::from_value(settings_value.clone()).map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'settings' value: {e}"))
+                })?;
+            let preserve_empty_password = params
+                .get("preserveEmptyPassword")
+                .and_then(|v| v.as_bool())
+                .or_else(|| {
+                    params
+                        .get("preserve_empty_password")
+                        .and_then(|v| v.as_bool())
+                });
+            let result = cc_switch_core::webdav_test_connection(settings, preserve_empty_password)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "webdav_sync_upload" => {
+            let result = cc_switch_core::webdav_sync_upload(core)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "webdav_sync_download" => {
+            let result = cc_switch_core::webdav_sync_download(core)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "webdav_sync_save_settings" => {
+            let settings_value = params
+                .get("settings")
+                .ok_or_else(|| RpcError::invalid_params("missing 'settings' field"))?;
+            let settings: cc_switch_core::WebDavSyncSettings =
+                serde_json::from_value(settings_value.clone()).map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'settings' value: {e}"))
+                })?;
+            let password_touched = params
+                .get("passwordTouched")
+                .and_then(|v| v.as_bool())
+                .or_else(|| params.get("password_touched").and_then(|v| v.as_bool()));
+            let result = cc_switch_core::webdav_sync_save_settings(settings, password_touched)
+                .map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "webdav_sync_fetch_remote_info" => {
+            let result = cc_switch_core::webdav_sync_fetch_remote_info()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "get_installed_skills" => {
+            let skills = cc_switch_core::get_installed_skills(core).map_err(RpcError::app_error)?;
+            Ok(skills)
+        }
+
+        "discover_available_skills" => {
+            let skills = cc_switch_core::discover_available_skills(core)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(skills)
+        }
+
+        "get_skills_for_app" => {
+            let app = get_str_param(params, &["app"])?;
+            let skills = cc_switch_core::get_skills_for_app(core, app)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(skills)
+        }
+
+        "install_skill" => {
+            let directory = get_str_param(params, &["directory"])?;
+            let ok = cc_switch_core::install_skill(core, directory)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "install_skill_for_app" => {
+            let app = get_str_param(params, &["app"])?;
+            let directory = get_str_param(params, &["directory"])?;
+            let ok = cc_switch_core::install_skill_for_app(core, app, directory)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "uninstall_skill" => {
+            let directory = get_str_param(params, &["directory"])?;
+            let ok =
+                cc_switch_core::uninstall_skill(core, directory).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "uninstall_skill_for_app" => {
+            let app = get_str_param(params, &["app"])?;
+            let directory = get_str_param(params, &["directory"])?;
+            let ok = cc_switch_core::uninstall_skill_for_app(core, app, directory)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "install_skill_unified" => {
+            let skill_value = params
+                .get("skill")
+                .ok_or_else(|| RpcError::invalid_params("missing 'skill' field"))?;
+            let skill: cc_switch_core::DiscoverableSkill =
+                serde_json::from_value(skill_value.clone())
+                    .map_err(|e| RpcError::invalid_params(format!("invalid 'skill' value: {e}")))?;
+            let current_app = get_str_param(params, &["current_app", "currentApp"])?;
+            let installed = cc_switch_core::install_skill_unified(core, skill, current_app)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(installed)
+        }
+
+        "uninstall_skill_unified" => {
+            let id = get_str_param(params, &["id"])?;
+            let ok =
+                cc_switch_core::uninstall_skill_unified(core, id).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "toggle_skill_app" => {
+            let id = get_str_param(params, &["id"])?;
+            let app = get_str_param(params, &["app"])?;
+            let enabled = get_bool_param(params, &["enabled"])?;
+            let ok = cc_switch_core::toggle_skill_app(core, id, app, enabled)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "scan_unmanaged_skills" => {
+            let skills =
+                cc_switch_core::scan_unmanaged_skills(core).map_err(RpcError::app_error)?;
+            Ok(skills)
+        }
+
+        "import_skills_from_apps" => {
+            let directories_value = params
+                .get("directories")
+                .cloned()
+                .ok_or_else(|| RpcError::invalid_params("missing 'directories' field"))?;
+            let directories: Vec<String> =
+                serde_json::from_value(directories_value).map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'directories' value: {e}"))
+                })?;
+            let installed = cc_switch_core::import_skills_from_apps(core, directories)
+                .map_err(RpcError::app_error)?;
+            Ok(installed)
+        }
+
+        "get_skill_repos" => {
+            let repos = cc_switch_core::get_skill_repos(core).map_err(RpcError::app_error)?;
+            serde_json::to_value(repos).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "add_skill_repo" => {
+            let repo_value = params
+                .get("repo")
+                .ok_or_else(|| RpcError::invalid_params("missing 'repo' field"))?;
+            let repo: cc_switch_core::SkillRepo = serde_json::from_value(repo_value.clone())
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'repo' value: {e}")))?;
+            let ok = cc_switch_core::add_skill_repo(core, repo).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "remove_skill_repo" => {
+            let owner = get_str_param(params, &["owner"])?;
+            let name = get_str_param(params, &["name"])?;
+            let ok = cc_switch_core::remove_skill_repo(core, owner, name)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "install_skills_from_zip" => {
+            let file_path = get_str_param(params, &["filePath", "file_path"])?;
+            let current_app = get_str_param(params, &["current_app", "currentApp"])?;
+            let installed = cc_switch_core::install_skills_from_zip(core, file_path, current_app)
+                .map_err(RpcError::app_error)?;
+            Ok(installed)
+        }
+
+        "list_sessions" => {
+            let sessions = cc_switch_core::list_sessions()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(sessions)
+        }
+
+        "get_session_messages" => {
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+            let source_path = get_str_param(params, &["sourcePath", "source_path"])?;
+            let messages = cc_switch_core::get_session_messages(provider_id, source_path)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(messages)
+        }
+
+        "launch_session_terminal" => {
+            let command = get_str_param(params, &["command"])?;
+            let cwd = params
+                .get("cwd")
+                .and_then(|value| value.as_str())
+                .map(str::to_string);
+            let custom_config = params
+                .get("customConfig")
+                .and_then(|value| value.as_str())
+                .map(str::to_string)
+                .or_else(|| {
+                    params
+                        .get("custom_config")
+                        .and_then(|value| value.as_str())
+                        .map(str::to_string)
+                });
+            let ok = cc_switch_core::launch_session_terminal(command, cwd, custom_config)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "delete_session" => {
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+            let session_id = get_str_param(params, &["sessionId", "session_id"])?;
+            let source_path = get_str_param(params, &["sourcePath", "source_path"])?;
+            let ok = cc_switch_core::delete_session(provider_id, session_id, source_path)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "extract_common_config_snippet" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+            let settings_config = params
+                .get("settingsConfig")
+                .and_then(|value| value.as_str())
+                .or_else(|| {
+                    params
+                        .get("settings_config")
+                        .and_then(|value| value.as_str())
+                });
+            let snippet =
+                cc_switch_core::extract_common_config_snippet(core, app_type, settings_config)
+                    .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(snippet))
+        }
+
+        "get_skills_migration_result" => {
+            let result = cc_switch_core::get_skills_migration_result()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "get_tool_versions" => {
+            let tools = params
+                .get("tools")
+                .cloned()
+                .map(serde_json::from_value)
+                .transpose()
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'tools' value: {e}")))?;
+            let wsl_shell_by_tool = params
+                .get("wslShellByTool")
+                .or_else(|| params.get("wsl_shell_by_tool"))
+                .cloned()
+                .map(
+                    serde_json::from_value::<
+                        HashMap<String, cc_switch_core::WslShellPreferenceInput>,
+                    >,
+                )
+                .transpose()
+                .map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'wslShellByTool' value: {e}"))
+                })?;
+            let result = cc_switch_core::get_tool_versions(tools, wsl_shell_by_tool)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "remove_provider_from_live_config" => {
+            let app = get_str_param(params, &["app"])?;
+            let id = get_str_param(params, &["id"])?;
+            let ok = cc_switch_core::remove_provider_from_live_config(core, app, id)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "import_mcp_from_apps" => {
+            let count = cc_switch_core::import_mcp_from_apps(core).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(count))
+        }
+
+        "import_openclaw_providers_from_live" => {
+            let count = cc_switch_core::import_openclaw_providers_from_live(core)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(count))
+        }
+
+        "get_openclaw_live_provider_ids" => {
+            let ids =
+                cc_switch_core::get_openclaw_live_provider_ids().map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ids))
+        }
+
+        "get_openclaw_live_provider" => {
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+            let provider = cc_switch_core::get_openclaw_live_provider(provider_id)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(provider))
+        }
+
+        "scan_openclaw_config_health" => {
+            let warnings =
+                cc_switch_core::scan_openclaw_config_health().map_err(RpcError::app_error)?;
+            Ok(warnings)
+        }
+
+        "get_openclaw_default_model" => {
+            let model =
+                cc_switch_core::get_openclaw_default_model().map_err(RpcError::app_error)?;
+            Ok(model)
+        }
+
+        "set_openclaw_default_model" => {
+            let model_value = params
+                .get("model")
+                .ok_or_else(|| RpcError::invalid_params("missing 'model' field"))?;
+            let model: cc_switch_core::OpenClawDefaultModel =
+                serde_json::from_value(model_value.clone())
+                    .map_err(|e| RpcError::invalid_params(format!("invalid 'model' value: {e}")))?;
+            let result =
+                cc_switch_core::set_openclaw_default_model(model).map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "get_openclaw_model_catalog" => {
+            let catalog =
+                cc_switch_core::get_openclaw_model_catalog().map_err(RpcError::app_error)?;
+            Ok(catalog)
+        }
+
+        "set_openclaw_model_catalog" => {
+            let catalog_value = params
+                .get("catalog")
+                .ok_or_else(|| RpcError::invalid_params("missing 'catalog' field"))?;
+            let catalog: HashMap<String, cc_switch_core::OpenClawModelCatalogEntry> =
+                serde_json::from_value(catalog_value.clone()).map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'catalog' value: {e}"))
+                })?;
+            let result =
+                cc_switch_core::set_openclaw_model_catalog(catalog).map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "get_openclaw_agents_defaults" => {
+            let defaults =
+                cc_switch_core::get_openclaw_agents_defaults().map_err(RpcError::app_error)?;
+            Ok(defaults)
+        }
+
+        "set_openclaw_agents_defaults" => {
+            let defaults_value = params
+                .get("defaults")
+                .ok_or_else(|| RpcError::invalid_params("missing 'defaults' field"))?;
+            let defaults: cc_switch_core::OpenClawAgentsDefaults =
+                serde_json::from_value(defaults_value.clone()).map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'defaults' value: {e}"))
+                })?;
+            let result = cc_switch_core::set_openclaw_agents_defaults(defaults)
+                .map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "get_openclaw_env" => {
+            let env = cc_switch_core::get_openclaw_env().map_err(RpcError::app_error)?;
+            Ok(env)
+        }
+
+        "set_openclaw_env" => {
+            let env_value = params
+                .get("env")
+                .ok_or_else(|| RpcError::invalid_params("missing 'env' field"))?;
+            let env: cc_switch_core::OpenClawEnvConfig = serde_json::from_value(env_value.clone())
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'env' value: {e}")))?;
+            let result = cc_switch_core::set_openclaw_env(env).map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "get_openclaw_tools" => {
+            let tools = cc_switch_core::get_openclaw_tools().map_err(RpcError::app_error)?;
+            Ok(tools)
+        }
+
+        "set_openclaw_tools" => {
+            let tools_value = params
+                .get("tools")
+                .ok_or_else(|| RpcError::invalid_params("missing 'tools' field"))?;
+            let tools: cc_switch_core::OpenClawToolsConfig =
+                serde_json::from_value(tools_value.clone())
+                    .map_err(|e| RpcError::invalid_params(format!("invalid 'tools' value: {e}")))?;
+            let result = cc_switch_core::set_openclaw_tools(tools).map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "get_global_proxy_url" => {
+            let url = cc_switch_core::get_global_proxy_url(core).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(url))
+        }
+
+        "set_global_proxy_url" => {
+            let url = get_str_param(params, &["url"])?;
+            cc_switch_core::set_global_proxy_url(core, url).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(null))
+        }
+
+        "test_proxy_url" => {
+            let url = get_str_param(params, &["url"])?;
+            let result = cc_switch_core::test_proxy_url(url)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(result)
+        }
+
+        "get_upstream_proxy_status" => {
+            let status =
+                cc_switch_core::get_upstream_proxy_status().map_err(RpcError::app_error)?;
+            Ok(status)
+        }
+
+        "scan_local_proxies" => {
+            let proxies = cc_switch_core::scan_local_proxies()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(proxies)
+        }
+
+        "set_window_theme" => {
+            let theme = get_str_param(params, &["theme"])?;
+            cc_switch_core::set_window_theme(theme).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(null))
+        }
+
+        "read_omo_local_file" => {
+            let data = cc_switch_core::read_omo_local_file()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(data)
+        }
+
+        "get_current_omo_provider_id" => {
+            let id =
+                cc_switch_core::get_current_omo_provider_id(core).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(id))
+        }
+
+        "disable_current_omo" => {
+            cc_switch_core::disable_current_omo(core).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(null))
+        }
+
+        "read_omo_slim_local_file" => {
+            let data = cc_switch_core::read_omo_slim_local_file()
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(data)
+        }
+
+        "get_current_omo_slim_provider_id" => {
+            let id = cc_switch_core::get_current_omo_slim_provider_id(core)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(id))
+        }
+
+        "disable_current_omo_slim" => {
+            cc_switch_core::disable_current_omo_slim(core).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(null))
+        }
+
+        "import_opencode_providers_from_live" => {
+            let count = cc_switch_core::import_opencode_providers_from_live(core)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(count))
+        }
+
+        "get_opencode_live_provider_ids" => {
+            let ids =
+                cc_switch_core::get_opencode_live_provider_ids().map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ids))
+        }
+
+        "open_provider_terminal" => {
+            let app = get_str_param(params, &["app"])?;
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+            let ok = cc_switch_core::open_provider_terminal(core, app, provider_id)
+                .await
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "get_universal_providers" => {
+            let providers =
+                cc_switch_core::get_universal_providers(core).map_err(RpcError::app_error)?;
+            serde_json::to_value(providers).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_universal_provider" => {
+            let id = get_str_param(params, &["id"])?;
+            let provider =
+                cc_switch_core::get_universal_provider(core, id).map_err(RpcError::app_error)?;
+            serde_json::to_value(provider).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "upsert_universal_provider" => {
+            let provider_value = params
+                .get("provider")
+                .ok_or_else(|| RpcError::invalid_params("missing 'provider' field"))?;
+            let provider: cc_switch_core::UniversalProvider =
+                serde_json::from_value(provider_value.clone()).map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'provider' value: {e}"))
+                })?;
+            let ok = cc_switch_core::upsert_universal_provider(core, provider)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "delete_universal_provider" => {
+            let id = get_str_param(params, &["id"])?;
+            let ok =
+                cc_switch_core::delete_universal_provider(core, id).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "sync_universal_provider" => {
+            let id = get_str_param(params, &["id"])?;
+            let ok =
+                cc_switch_core::sync_universal_provider(core, id).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(ok))
+        }
+
+        "read_workspace_file" => {
+            let filename = get_str_param(params, &["filename"])?;
+            let content =
+                cc_switch_core::read_workspace_file(filename).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(content))
+        }
+
+        "write_workspace_file" => {
+            let filename = get_str_param(params, &["filename"])?;
+            let content = get_str_param(params, &["content"])?;
+            cc_switch_core::write_workspace_file(filename, content).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(null))
+        }
+
+        "list_daily_memory_files" => {
+            let files = cc_switch_core::list_daily_memory_files().map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(files))
+        }
+
+        "read_daily_memory_file" => {
+            let filename = get_str_param(params, &["filename"])?;
+            let content =
+                cc_switch_core::read_daily_memory_file(filename).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(content))
+        }
+
+        "write_daily_memory_file" => {
+            let filename = get_str_param(params, &["filename"])?;
+            let content = get_str_param(params, &["content"])?;
+            cc_switch_core::write_daily_memory_file(filename, content)
+                .map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(null))
+        }
+
+        "delete_daily_memory_file" => {
+            let filename = get_str_param(params, &["filename"])?;
+            cc_switch_core::delete_daily_memory_file(filename).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(null))
+        }
+
+        "search_daily_memory_files" => {
+            let query = get_str_param(params, &["query"])?;
+            let results =
+                cc_switch_core::search_daily_memory_files(query).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(results))
+        }
+
+        "open_workspace_directory" => {
+            let subdir = params
+                .get("subdir")
+                .and_then(|value| value.as_str())
+                .unwrap_or("workspace");
+            let path =
+                cc_switch_core::open_workspace_directory(subdir).map_err(RpcError::app_error)?;
+            Ok(serde_json::json!(path))
+        }
+
         // Skill commands
         "get_skills" => {
             let skills = cc_switch_core::get_skills(core)
@@ -1218,24 +2097,19 @@ pub async fn dispatch_command(
 
         // MCP commands
         "get_mcp_servers" => {
-            let servers =
-                cc_switch_core::get_mcp_servers(core).map_err(RpcError::app_error)?;
+            let servers = cc_switch_core::get_mcp_servers(core).map_err(RpcError::app_error)?;
 
-            serde_json::to_value(servers)
-                .map_err(|e| RpcError::internal_error(e.to_string()))
+            serde_json::to_value(servers).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "get_claude_mcp_status" => {
-            let status =
-                cc_switch_core::get_claude_mcp_status().map_err(RpcError::app_error)?;
+            let status = cc_switch_core::get_claude_mcp_status().map_err(RpcError::app_error)?;
 
-            serde_json::to_value(status)
-                .map_err(|e| RpcError::internal_error(e.to_string()))
+            serde_json::to_value(status).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "read_claude_mcp_config" => {
-            let content =
-                cc_switch_core::read_claude_mcp_config().map_err(RpcError::app_error)?;
+            let content = cc_switch_core::read_claude_mcp_config().map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(content))
         }
@@ -1251,8 +2125,8 @@ pub async fn dispatch_command(
                 .cloned()
                 .ok_or_else(|| RpcError::invalid_params("missing 'spec' field"))?;
 
-            let ok = cc_switch_core::upsert_claude_mcp_server(id, spec)
-                .map_err(RpcError::app_error)?;
+            let ok =
+                cc_switch_core::upsert_claude_mcp_server(id, spec).map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(ok))
         }
@@ -1263,8 +2137,7 @@ pub async fn dispatch_command(
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'id' field"))?;
 
-            let ok = cc_switch_core::delete_claude_mcp_server(id)
-                .map_err(RpcError::app_error)?;
+            let ok = cc_switch_core::delete_claude_mcp_server(id).map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(ok))
         }
@@ -1275,24 +2148,27 @@ pub async fn dispatch_command(
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'cmd' field"))?;
 
-            let ok = cc_switch_core::validate_mcp_command(cmd)
-                .map_err(RpcError::app_error)?;
+            let ok = cc_switch_core::validate_mcp_command(cmd).map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(ok))
         }
 
         "get_mcp_config" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
-            let config =
-                cc_switch_core::get_mcp_config(core, app).map_err(RpcError::app_error)?;
+            let config = cc_switch_core::get_mcp_config(core, app).map_err(RpcError::app_error)?;
 
-            serde_json::to_value(config)
-                .map_err(|e| RpcError::internal_error(e.to_string()))
+            serde_json::to_value(config).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "upsert_mcp_server_in_config" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let id = params
                 .get("id")
@@ -1306,8 +2182,9 @@ pub async fn dispatch_command(
 
             let sync_other_side = params.get("syncOtherSide").and_then(|v| v.as_bool());
 
-            let ok = cc_switch_core::upsert_mcp_server_in_config(core, app, id, spec, sync_other_side)
-                .map_err(RpcError::app_error)?;
+            let ok =
+                cc_switch_core::upsert_mcp_server_in_config(core, app, id, spec, sync_other_side)
+                    .map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(ok))
         }
@@ -1325,7 +2202,10 @@ pub async fn dispatch_command(
         }
 
         "set_mcp_enabled" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let id = params
                 .get("id")
@@ -1353,8 +2233,7 @@ pub async fn dispatch_command(
                     RpcError::invalid_params(format!("invalid 'server' value: {e}"))
                 })?;
 
-            cc_switch_core::upsert_mcp_server(core, server)
-                .map_err(RpcError::app_error)?;
+            cc_switch_core::upsert_mcp_server(core, server).map_err(RpcError::app_error)?;
 
             Ok(Value::Null)
         }
@@ -1365,8 +2244,7 @@ pub async fn dispatch_command(
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'id' field"))?;
 
-            let ok = cc_switch_core::delete_mcp_server(core, id)
-                .map_err(RpcError::app_error)?;
+            let ok = cc_switch_core::delete_mcp_server(core, id).map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(ok))
         }
@@ -1396,19 +2274,22 @@ pub async fn dispatch_command(
         // ========================
         // Prompt commands
         // ========================
-
         "get_prompts" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
-            let prompts = cc_switch_core::get_prompts(core, app)
-                .map_err(RpcError::app_error)?;
+            let prompts = cc_switch_core::get_prompts(core, app).map_err(RpcError::app_error)?;
 
-            serde_json::to_value(prompts)
-                .map_err(|e| RpcError::internal_error(e.to_string()))
+            serde_json::to_value(prompts).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "upsert_prompt" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let id = params
                 .get("id")
@@ -1419,56 +2300,63 @@ pub async fn dispatch_command(
                 .get("prompt")
                 .ok_or_else(|| RpcError::invalid_params("missing 'prompt' field"))?;
 
-            let prompt: cc_switch_core::Prompt =
-                serde_json::from_value(prompt_value.clone()).map_err(|e| {
-                    RpcError::invalid_params(format!("invalid 'prompt' value: {e}"))
-                })?;
+            let prompt: cc_switch_core::Prompt = serde_json::from_value(prompt_value.clone())
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'prompt' value: {e}")))?;
 
-            cc_switch_core::upsert_prompt(core, app, id, prompt)
-                .map_err(RpcError::app_error)?;
+            cc_switch_core::upsert_prompt(core, app, id, prompt).map_err(RpcError::app_error)?;
 
             Ok(Value::Null)
         }
 
         "delete_prompt" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let id = params
                 .get("id")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'id' field"))?;
 
-            cc_switch_core::delete_prompt(core, app, id)
-                .map_err(RpcError::app_error)?;
+            cc_switch_core::delete_prompt(core, app, id).map_err(RpcError::app_error)?;
 
             Ok(Value::Null)
         }
 
         "enable_prompt" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let id = params
                 .get("id")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'id' field"))?;
 
-            cc_switch_core::enable_prompt(core, app, id)
-                .map_err(RpcError::app_error)?;
+            cc_switch_core::enable_prompt(core, app, id).map_err(RpcError::app_error)?;
 
             Ok(Value::Null)
         }
 
         "import_prompt_from_file" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
-            let id = cc_switch_core::import_prompt_from_file(core, app)
-                .map_err(RpcError::app_error)?;
+            let id =
+                cc_switch_core::import_prompt_from_file(core, app).map_err(RpcError::app_error)?;
 
             Ok(serde_json::json!(id))
         }
 
         "get_current_prompt_file_content" => {
-            let app = params.get("app").and_then(|v| v.as_str()).unwrap_or("claude");
+            let app = params
+                .get("app")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude");
 
             let content = cc_switch_core::get_current_prompt_file_content(app)
                 .map_err(RpcError::app_error)?;
@@ -1479,18 +2367,16 @@ pub async fn dispatch_command(
         // ========================
         // Environment commands
         // ========================
-
         "check_env_conflicts" => {
             let app = params
                 .get("app")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'app' field"))?;
 
-            let conflicts = cc_switch_core::check_env_conflicts(app)
-                .map_err(RpcError::app_error)?;
+            let conflicts =
+                cc_switch_core::check_env_conflicts(app).map_err(RpcError::app_error)?;
 
-            serde_json::to_value(conflicts)
-                .map_err(|e| RpcError::internal_error(e.to_string()))
+            serde_json::to_value(conflicts).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "delete_env_vars" => {
@@ -1503,11 +2389,10 @@ pub async fn dispatch_command(
                     RpcError::invalid_params(format!("invalid 'conflicts' value: {e}"))
                 })?;
 
-            let backup_info = cc_switch_core::delete_env_vars(conflicts)
-                .map_err(RpcError::app_error)?;
+            let backup_info =
+                cc_switch_core::delete_env_vars(conflicts).map_err(RpcError::app_error)?;
 
-            serde_json::to_value(backup_info)
-                .map_err(|e| RpcError::internal_error(e.to_string()))
+            serde_json::to_value(backup_info).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "restore_env_backup" => {
@@ -1516,8 +2401,7 @@ pub async fn dispatch_command(
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'backupPath' field"))?;
 
-            cc_switch_core::restore_env_backup(backup_path)
-                .map_err(RpcError::app_error)?;
+            cc_switch_core::restore_env_backup(backup_path).map_err(RpcError::app_error)?;
 
             Ok(Value::Null)
         }
@@ -1525,7 +2409,6 @@ pub async fn dispatch_command(
         // ========================
         // Config snippet commands
         // ========================
-
         "get_claude_common_config_snippet" => {
             let snippet = cc_switch_core::get_claude_common_config_snippet(core)
                 .map_err(RpcError::app_error)?;
@@ -1534,10 +2417,7 @@ pub async fn dispatch_command(
         }
 
         "set_claude_common_config_snippet" => {
-            let snippet = params
-                .get("snippet")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let snippet = params.get("snippet").and_then(|v| v.as_str()).unwrap_or("");
 
             cc_switch_core::set_claude_common_config_snippet(core, snippet)
                 .map_err(RpcError::app_error)?;
@@ -1563,10 +2443,7 @@ pub async fn dispatch_command(
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'appType' field"))?;
 
-            let snippet = params
-                .get("snippet")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let snippet = params.get("snippet").and_then(|v| v.as_str()).unwrap_or("");
 
             cc_switch_core::set_common_config_snippet(core, app_type, snippet)
                 .map_err(RpcError::app_error)?;
@@ -1577,18 +2454,15 @@ pub async fn dispatch_command(
         // ========================
         // DeepLink commands
         // ========================
-
         "parse_deeplink" => {
             let url = params
                 .get("url")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| RpcError::invalid_params("missing 'url' field"))?;
 
-            let request = cc_switch_core::parse_deeplink(url)
-                .map_err(RpcError::app_error)?;
+            let request = cc_switch_core::parse_deeplink(url).map_err(RpcError::app_error)?;
 
-            serde_json::to_value(request)
-                .map_err(|e| RpcError::internal_error(e.to_string()))
+            serde_json::to_value(request).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "merge_deeplink_config" => {
@@ -1601,11 +2475,26 @@ pub async fn dispatch_command(
                     RpcError::invalid_params(format!("invalid 'request' value: {e}"))
                 })?;
 
-            let merged = cc_switch_core::merge_deeplink_config(request)
-                .map_err(RpcError::app_error)?;
+            let merged =
+                cc_switch_core::merge_deeplink_config(request).map_err(RpcError::app_error)?;
 
-            serde_json::to_value(merged)
-                .map_err(|e| RpcError::internal_error(e.to_string()))
+            serde_json::to_value(merged).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "import_from_deeplink" => {
+            let request_value = params
+                .get("request")
+                .ok_or_else(|| RpcError::invalid_params("missing 'request' field"))?;
+
+            let request: cc_switch_core::DeepLinkImportRequest =
+                serde_json::from_value(request_value.clone()).map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'request' value: {e}"))
+                })?;
+
+            let provider_id =
+                cc_switch_core::import_from_deeplink(core, request).map_err(RpcError::app_error)?;
+
+            Ok(serde_json::json!(provider_id))
         }
 
         "import_from_deeplink_unified" => {
@@ -1638,7 +2527,6 @@ pub async fn dispatch_command(
         // ========================
         // Auth commands
         // ========================
-
         "auth.status" => {
             let enabled = state.auth_config.is_some();
             Ok(serde_json::json!({ "enabled": enabled }))
