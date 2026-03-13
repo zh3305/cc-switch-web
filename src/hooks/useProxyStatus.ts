@@ -50,9 +50,15 @@ export function useProxyStatus() {
   const startProxyServerMutation = useMutation({
     mutationFn: () => invoke<ProxyServerInfo>("start_proxy_server"),
     onSuccess: (info) => {
+      const message = t("proxy.server.started", {
+        address: info.address,
+        port: info.port,
+        defaultValue: `代理服务已启动 - ${info.address}:${info.port}`,
+      });
       toast.success(
-        t("proxy.server.started", {
-          defaultValue: `代理服务已启动 - ${info.address}:${info.port}`,
+        fillMessageTemplate(message, {
+          address: info.address,
+          port: String(info.port),
         }),
         { closeButton: true },
       );

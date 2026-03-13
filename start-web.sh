@@ -201,6 +201,13 @@ require_command node "node not found. Please install Node.js."
 resolve_frontend_command
 
 echo "📦 Runtime directory: $RUNTIME_DIR"
+echo "🎨 Building frontend assets..."
+if command -v pnpm >/dev/null 2>&1; then
+    pnpm build:web
+else
+    npx vite build --mode web
+fi
+
 echo "🔨 Building backend server..."
 cargo build --release --manifest-path crates/server/Cargo.toml
 
