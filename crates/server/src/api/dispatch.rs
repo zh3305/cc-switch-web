@@ -16,6 +16,40 @@ fn get_bool_param(params: &Value, keys: &[&str]) -> Result<bool, RpcError> {
         .ok_or_else(|| RpcError::invalid_params(format!("missing '{}' field", keys[0])))
 }
 
+fn get_optional_i64_param(params: &Value, keys: &[&str]) -> Result<Option<i64>, RpcError> {
+    for key in keys {
+        match params.get(*key) {
+            Some(value) => {
+                return value
+                    .as_i64()
+                    .map(Some)
+                    .ok_or_else(|| RpcError::invalid_params(format!("invalid '{}' field", key)));
+            }
+            None => continue,
+        }
+    }
+
+    Ok(None)
+}
+
+fn get_optional_u32_param(params: &Value, keys: &[&str]) -> Result<Option<u32>, RpcError> {
+    for key in keys {
+        match params.get(*key) {
+            Some(value) => {
+                let raw = value
+                    .as_u64()
+                    .ok_or_else(|| RpcError::invalid_params(format!("invalid '{}' field", key)))?;
+                let parsed = u32::try_from(raw)
+                    .map_err(|_| RpcError::invalid_params(format!("invalid '{}' field", key)))?;
+                return Ok(Some(parsed));
+            }
+            None => continue,
+        }
+    }
+
+    Ok(None)
+}
+
 /// Dispatch a command to the appropriate handler
 pub async fn dispatch_command(
     state: &Arc<ServerState>,
@@ -295,6 +329,158 @@ pub async fn dispatch_command(
                 .map_err(RpcError::app_error)?;
 
             Ok(Value::Null)
+        }
+
+        "stream_check_provider" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+
+            let result = cc_switch_core::stream_check_provider(core, app_type, provider_id)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(result).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "stream_check_all_providers" => {
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+            let proxy_targets_only = params
+                .get("proxyTargetsOnly")
+                .or_else(|| params.get("proxy_targets_only"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let result = cc_switch_core::stream_check_all_providers(core, app_type, proxy_targets_only)
+                .await
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(result).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_stream_check_config" => {
+            let config = cc_switch_core::get_stream_check_config(core).map_err(RpcError::app_error)?;
+
+            serde_json::to_value(config).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "save_stream_check_config" => {
+            let config_value = params
+                .get("config")
+                .ok_or_else(|| RpcError::invalid_params("missing 'config' field"))?;
+
+            let config: cc_switch_core::StreamCheckConfig =
+                serde_json::from_value(config_value.clone()).map_err(|e| {
+                    RpcError::invalid_params(format!("invalid 'config' value: {e}"))
+                })?;
+
+            cc_switch_core::save_stream_check_config(core, config).map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "get_usage_summary" => {
+            let start_date = get_optional_i64_param(params, &["startDate", "start_date"])?;
+            let end_date = get_optional_i64_param(params, &["endDate", "end_date"])?;
+
+            let summary = cc_switch_core::get_usage_summary(core, start_date, end_date)
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(summary).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_usage_trends" => {
+            let start_date = get_optional_i64_param(params, &["startDate", "start_date"])?;
+            let end_date = get_optional_i64_param(params, &["endDate", "end_date"])?;
+
+            let trends = cc_switch_core::get_usage_trends(core, start_date, end_date)
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(trends).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_provider_stats" => {
+            let stats = cc_switch_core::get_provider_stats(core).map_err(RpcError::app_error)?;
+
+            serde_json::to_value(stats).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_model_stats" => {
+            let stats = cc_switch_core::get_model_stats(core).map_err(RpcError::app_error)?;
+
+            serde_json::to_value(stats).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_request_logs" => {
+            let filters_value = params
+                .get("filters")
+                .ok_or_else(|| RpcError::invalid_params("missing 'filters' field"))?;
+            let filters: cc_switch_core::LogFilters = serde_json::from_value(filters_value.clone())
+                .map_err(|e| RpcError::invalid_params(format!("invalid 'filters' value: {e}")))?;
+            let page = get_optional_u32_param(params, &["page"])?.unwrap_or(0);
+            let page_size = get_optional_u32_param(params, &["pageSize", "page_size"])?
+                .unwrap_or(20);
+
+            let logs = cc_switch_core::get_request_logs(core, filters, page, page_size)
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(logs).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_request_detail" => {
+            let request_id = get_str_param(params, &["requestId", "request_id"])?;
+
+            let detail = cc_switch_core::get_request_detail(core, request_id)
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(detail).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "get_model_pricing" => {
+            let pricing = cc_switch_core::get_model_pricing(core).map_err(RpcError::app_error)?;
+
+            serde_json::to_value(pricing).map_err(|e| RpcError::internal_error(e.to_string()))
+        }
+
+        "update_model_pricing" => {
+            let model_id = get_str_param(params, &["modelId", "model_id"])?;
+            let display_name = get_str_param(params, &["displayName", "display_name"])?;
+            let input_cost = get_str_param(params, &["inputCost", "input_cost"])?;
+            let output_cost = get_str_param(params, &["outputCost", "output_cost"])?;
+            let cache_read_cost = get_str_param(params, &["cacheReadCost", "cache_read_cost"])?;
+            let cache_creation_cost =
+                get_str_param(params, &["cacheCreationCost", "cache_creation_cost"])?;
+
+            cc_switch_core::update_model_pricing(
+                core,
+                model_id.to_string(),
+                display_name.to_string(),
+                input_cost.to_string(),
+                output_cost.to_string(),
+                cache_read_cost.to_string(),
+                cache_creation_cost.to_string(),
+            )
+            .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "delete_model_pricing" => {
+            let model_id = get_str_param(params, &["modelId", "model_id"])?;
+
+            cc_switch_core::delete_model_pricing(core, model_id.to_string())
+                .map_err(RpcError::app_error)?;
+
+            Ok(Value::Null)
+        }
+
+        "check_provider_limits" => {
+            let provider_id = get_str_param(params, &["providerId", "provider_id"])?;
+            let app_type = get_str_param(params, &["appType", "app_type"])?;
+
+            let status = cc_switch_core::check_provider_limits(core, provider_id, app_type)
+                .map_err(RpcError::app_error)?;
+
+            serde_json::to_value(status).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         // Proxy commands

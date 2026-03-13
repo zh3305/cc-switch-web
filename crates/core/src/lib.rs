@@ -7,6 +7,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use chrono::Utc;
 use cc_switch::{
     AppError, AppSettings, AppState, AppType, Database, EndpointLatency, McpServer, Provider,
     ProviderService, SkillService, SpeedtestService,
@@ -15,8 +16,10 @@ use indexmap::IndexMap;
 
 /// 对外暴露的核心类型别名，便于直接使用
 pub use cc_switch::{
-    AppSettings as CoreAppSettings, AppType as CoreAppType, McpServer as CoreMcpServer,
-    Provider as CoreProvider,
+    AppSettings as CoreAppSettings, AppType as CoreAppType, DailyStats, HealthStatus,
+    LogFilters, McpServer as CoreMcpServer, ModelPricingInfo as CoreModelPricingInfo,
+    ModelStats, PaginatedLogs, Provider as CoreProvider, ProviderLimitStatus, ProviderStats,
+    RequestLogDetail, StreamCheckConfig, StreamCheckResult, StreamCheckService, UsageSummary,
 };
 
 /// 核心上下文
@@ -224,6 +227,214 @@ pub fn update_endpoint_last_used(
 ) -> Result<(), String> {
     let app_type = AppType::from_str(app).map_err(|e| e.to_string())?;
     ProviderService::update_endpoint_last_used(ctx.app_state(), app_type, provider_id, url)
+        .map_err(|e| e.to_string())
+}
+
+pub async fn stream_check_provider(
+    ctx: &CoreContext,
+    app_type: &str,
+    provider_id: &str,
+) -> Result<StreamCheckResult, String> {
+    let app_type = AppType::from_str(app_type).map_err(|e| e.to_string())?;
+    let config = ctx
+        .app_state()
+        .db
+        .get_stream_check_config()
+        .map_err(|e| e.to_string())?;
+
+    let providers = ctx
+        .app_state()
+        .db
+        .get_all_providers(app_type.as_str())
+        .map_err(|e| e.to_string())?;
+    let provider = providers
+        .get(provider_id)
+        .ok_or_else(|| format!("供应商 {provider_id} 不存在"))?;
+
+    let result = StreamCheckService::check_with_retry(&app_type, provider, &config)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let _ = ctx.app_state().db.save_stream_check_log(
+        provider_id,
+        &provider.name,
+        app_type.as_str(),
+        &result,
+    );
+
+    Ok(result)
+}
+
+pub async fn stream_check_all_providers(
+    ctx: &CoreContext,
+    app_type: &str,
+    proxy_targets_only: bool,
+) -> Result<Vec<(String, StreamCheckResult)>, String> {
+    let app_type = AppType::from_str(app_type).map_err(|e| e.to_string())?;
+    let config = ctx
+        .app_state()
+        .db
+        .get_stream_check_config()
+        .map_err(|e| e.to_string())?;
+    let providers = ctx
+        .app_state()
+        .db
+        .get_all_providers(app_type.as_str())
+        .map_err(|e| e.to_string())?;
+
+    let allowed_ids = if proxy_targets_only {
+        let mut ids = std::collections::HashSet::new();
+        if let Ok(Some(current_id)) = ctx.app_state().db.get_current_provider(app_type.as_str()) {
+            ids.insert(current_id);
+        }
+        if let Ok(queue) = ctx.app_state().db.get_failover_queue(app_type.as_str()) {
+            for item in queue {
+                ids.insert(item.provider_id);
+            }
+        }
+        Some(ids)
+    } else {
+        None
+    };
+
+    let mut results = Vec::new();
+    for (id, provider) in providers {
+        if let Some(ids) = &allowed_ids {
+            if !ids.contains(&id) {
+                continue;
+            }
+        }
+
+        let result = StreamCheckService::check_with_retry(&app_type, &provider, &config)
+            .await
+            .unwrap_or_else(|e| StreamCheckResult {
+                status: HealthStatus::Failed,
+                success: false,
+                message: e.to_string(),
+                response_time_ms: None,
+                http_status: None,
+                model_used: String::new(),
+                tested_at: Utc::now().timestamp(),
+                retry_count: 0,
+            });
+
+        let _ = ctx
+            .app_state()
+            .db
+            .save_stream_check_log(&id, &provider.name, app_type.as_str(), &result);
+
+        results.push((id, result));
+    }
+
+    Ok(results)
+}
+
+pub fn get_stream_check_config(ctx: &CoreContext) -> Result<StreamCheckConfig, String> {
+    ctx.app_state()
+        .db
+        .get_stream_check_config()
+        .map_err(|e| e.to_string())
+}
+
+pub fn save_stream_check_config(
+    ctx: &CoreContext,
+    config: StreamCheckConfig,
+) -> Result<(), String> {
+    ctx.app_state()
+        .db
+        .save_stream_check_config(&config)
+        .map_err(|e| e.to_string())
+}
+
+pub fn get_usage_summary(
+    ctx: &CoreContext,
+    start_date: Option<i64>,
+    end_date: Option<i64>,
+) -> Result<UsageSummary, String> {
+    ctx.app_state()
+        .db
+        .get_usage_summary(start_date, end_date)
+        .map_err(|e| e.to_string())
+}
+
+pub fn get_usage_trends(
+    ctx: &CoreContext,
+    start_date: Option<i64>,
+    end_date: Option<i64>,
+) -> Result<Vec<DailyStats>, String> {
+    ctx.app_state()
+        .db
+        .get_daily_trends(start_date, end_date)
+        .map_err(|e| e.to_string())
+}
+
+pub fn get_provider_stats(ctx: &CoreContext) -> Result<Vec<ProviderStats>, String> {
+    ctx.app_state().db.get_provider_stats().map_err(|e| e.to_string())
+}
+
+pub fn get_model_stats(ctx: &CoreContext) -> Result<Vec<ModelStats>, String> {
+    ctx.app_state().db.get_model_stats().map_err(|e| e.to_string())
+}
+
+pub fn get_request_logs(
+    ctx: &CoreContext,
+    filters: LogFilters,
+    page: u32,
+    page_size: u32,
+) -> Result<PaginatedLogs, String> {
+    ctx.app_state()
+        .db
+        .get_request_logs(&filters, page, page_size)
+        .map_err(|e| e.to_string())
+}
+
+pub fn get_request_detail(
+    ctx: &CoreContext,
+    request_id: &str,
+) -> Result<Option<RequestLogDetail>, String> {
+    ctx.app_state()
+        .db
+        .get_request_detail(request_id)
+        .map_err(|e| e.to_string())
+}
+
+pub fn get_model_pricing(ctx: &CoreContext) -> Result<Vec<CoreModelPricingInfo>, String> {
+    cc_switch::list_model_pricing(&ctx.app_state().db).map_err(|e| e.to_string())
+}
+
+pub fn update_model_pricing(
+    ctx: &CoreContext,
+    model_id: String,
+    display_name: String,
+    input_cost: String,
+    output_cost: String,
+    cache_read_cost: String,
+    cache_creation_cost: String,
+) -> Result<(), String> {
+    cc_switch::upsert_model_pricing(
+        &ctx.app_state().db,
+        model_id,
+        display_name,
+        input_cost,
+        output_cost,
+        cache_read_cost,
+        cache_creation_cost,
+    )
+    .map_err(|e| e.to_string())
+}
+
+pub fn delete_model_pricing(ctx: &CoreContext, model_id: String) -> Result<(), String> {
+    cc_switch::remove_model_pricing(&ctx.app_state().db, model_id).map_err(|e| e.to_string())
+}
+
+pub fn check_provider_limits(
+    ctx: &CoreContext,
+    provider_id: &str,
+    app_type: &str,
+) -> Result<ProviderLimitStatus, String> {
+    ctx.app_state()
+        .db
+        .check_provider_limits(provider_id, app_type)
         .map_err(|e| e.to_string())
 }
 

@@ -1,5 +1,6 @@
 //! 使用统计相关命令
 
+use crate::database::Database;
 use crate::error::AppError;
 use crate::services::usage_stats::*;
 use crate::store::AppState;
@@ -58,15 +59,12 @@ pub fn get_request_detail(
 }
 
 /// 获取模型定价列表
-#[tauri::command]
-pub fn get_model_pricing(state: State<'_, AppState>) -> Result<Vec<ModelPricingInfo>, AppError> {
+pub fn list_model_pricing(db: &Database) -> Result<Vec<ModelPricingInfo>, AppError> {
     log::info!("获取模型定价列表");
-    state.db.ensure_model_pricing_seeded()?;
+    db.ensure_model_pricing_seeded()?;
 
-    let db = state.db.clone();
     let conn = crate::database::lock_conn!(db.conn);
 
-    // 检查表是否存在
     let table_exists: bool = conn
         .query_row(
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='model_pricing'",
@@ -108,9 +106,8 @@ pub fn get_model_pricing(state: State<'_, AppState>) -> Result<Vec<ModelPricingI
 }
 
 /// 更新模型定价
-#[tauri::command]
-pub fn update_model_pricing(
-    state: State<'_, AppState>,
+pub fn upsert_model_pricing(
+    db: &Database,
     model_id: String,
     display_name: String,
     input_cost: String,
@@ -118,7 +115,6 @@ pub fn update_model_pricing(
     cache_read_cost: String,
     cache_creation_cost: String,
 ) -> Result<(), AppError> {
-    let db = state.db.clone();
     let conn = crate::database::lock_conn!(db.conn);
 
     conn.execute(
@@ -140,6 +136,47 @@ pub fn update_model_pricing(
     Ok(())
 }
 
+/// 删除模型定价
+pub fn remove_model_pricing(db: &Database, model_id: String) -> Result<(), AppError> {
+    let conn = crate::database::lock_conn!(db.conn);
+
+    conn.execute(
+        "DELETE FROM model_pricing WHERE model_id = ?1",
+        rusqlite::params![model_id.clone()],
+    )
+    .map_err(|e| AppError::Database(format!("删除模型定价失败: {e}")))?;
+
+    log::info!("已删除模型定价: {model_id}");
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_model_pricing(state: State<'_, AppState>) -> Result<Vec<ModelPricingInfo>, AppError> {
+    list_model_pricing(&state.db)
+}
+
+/// 更新模型定价
+#[tauri::command]
+pub fn update_model_pricing(
+    state: State<'_, AppState>,
+    model_id: String,
+    display_name: String,
+    input_cost: String,
+    output_cost: String,
+    cache_read_cost: String,
+    cache_creation_cost: String,
+) -> Result<(), AppError> {
+    upsert_model_pricing(
+        &state.db,
+        model_id,
+        display_name,
+        input_cost,
+        output_cost,
+        cache_read_cost,
+        cache_creation_cost,
+    )
+}
+
 /// 检查 Provider 使用限额
 #[tauri::command]
 pub fn check_provider_limits(
@@ -153,17 +190,7 @@ pub fn check_provider_limits(
 /// 删除模型定价
 #[tauri::command]
 pub fn delete_model_pricing(state: State<'_, AppState>, model_id: String) -> Result<(), AppError> {
-    let db = state.db.clone();
-    let conn = crate::database::lock_conn!(db.conn);
-
-    conn.execute(
-        "DELETE FROM model_pricing WHERE model_id = ?1",
-        rusqlite::params![model_id],
-    )
-    .map_err(|e| AppError::Database(format!("删除模型定价失败: {e}")))?;
-
-    log::info!("已删除模型定价: {model_id}");
-    Ok(())
+    remove_model_pricing(&state.db, model_id)
 }
 
 /// 模型定价信息

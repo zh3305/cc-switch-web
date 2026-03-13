@@ -807,8 +807,10 @@ name = "cc-switch-core"
 version = "0.1.0"
 dependencies = [
  "cc-switch",
+ "chrono",
  "indexmap 2.12.1",
  "log",
+ "rusqlite",
  "serde",
  "serde_json",
 ]

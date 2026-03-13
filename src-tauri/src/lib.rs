@@ -34,6 +34,7 @@ pub use codex_config::{
 };
 pub use commands::open_provider_terminal;
 pub use commands::*;
+pub use commands::ModelPricingInfo;
 pub use config::{get_app_config_dir, get_app_config_path, get_claude_config_dir, get_claude_mcp_path, get_claude_settings_path, read_json_file};
 pub use database::Database;
 pub use deeplink::{
@@ -43,6 +44,11 @@ pub use deeplink::{
 pub use prompt::Prompt;
 pub use services::env_checker::{check_env_conflicts, EnvConflict};
 pub use services::env_manager::{delete_env_vars, restore_from_backup, BackupInfo};
+pub use services::stream_check::{HealthStatus, StreamCheckConfig, StreamCheckResult, StreamCheckService};
+pub use services::usage_stats::{
+    DailyStats, LogFilters, ModelStats, PaginatedLogs, ProviderLimitStatus, ProviderStats,
+    RequestLogDetail, UsageSummary,
+};
 pub use error::AppError;
 pub use mcp::{
     import_from_claude, import_from_codex, import_from_gemini, remove_server_from_claude,
