@@ -1,601 +1,137 @@
 <div align="center">
 
-# Claude Code / Codex / Gemini CLI オールインワン・アシスタント
+# CC Switch Fork
 
-[![Version](https://img.shields.io/badge/version-3.8.2-blue.svg)](https://github.com/farion1231/cc-switch/releases)
-[![Trending](https://img.shields.io/badge/🔥_TypeScript_Trending-Daily%20%7C%20Weekly%20%7C%20Monthly-ff6b6b.svg)](https://github.com/trending/typescript)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/farion1231/cc-switch/releases)
-[![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
-[![Downloads](https://img.shields.io/endpoint?url=https://api.pinstudios.net/api/badges/downloads/farion1231/cc-switch/total)](https://github.com/farion1231/cc-switch/releases/latest)
+[English](README.md) | [中文](README_ZH.md) | 日本語
 
-<a href="https://trendshift.io/repositories/15372" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15372" alt="farion1231%2Fcc-switch | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-
-[English](README.md) | [中文](README_ZH.md) | 日本語 | [Changelog](CHANGELOG.md) | [v3.8.0 リリースノート](docs/release-note-v3.8.0-en.md)
-
-**プロバイダスイッチャーから AI CLI 一体型管理プラットフォームへ**
-
-Claude Code・Codex・Gemini CLI のプロバイダ設定、MCP サーバー、Skills 拡張、システムプロンプトを統合管理。
+このリポジトリは `cc-switch` の fork です。README には、この fork で現在も有効な内容だけを残しています。主にローカル開発、ビルド、実行方法を説明します。
 
 </div>
+
+## 位置づけ
+
+この fork はローカルカスタマイズと継続的な開発用です。現在のコードベースは次を扱います。
+
+- Claude Code、Codex、Gemini、OpenCode、OpenClaw の設定管理
+- MCP、Prompts、Skills、プロキシ、フェイルオーバー、使用量関連機能
+- Tauri デスクトップ版と単一ポートの Web モード
 
 ## スクリーンショット
 
 |                  メイン画面                   |                  プロバイダ追加                  |
 | :-------------------------------------------: | :----------------------------------------------: |
-| ![メイン画面](assets/screenshots/main-ja.png) | ![プロバイダ追加](assets/screenshots/add-ja.png) |
+| ![Main Interface](assets/screenshots/main-en.png) | ![Add Provider](assets/screenshots/add-en.png) |
 
-## 特長
+## ローカル開発
 
-### 現在のバージョン：v3.8.2 | [完全な更新履歴](CHANGELOG.md) | [リリースノート](docs/release-note-v3.8.0-en.md)
-
-**v3.8.0 メジャーアップデート (2025-11-28)**
-
-**永続化アーキテクチャ刷新 & 新 UI**
-
-- **SQLite + JSON 二層構造**
-  - JSON 単独保存から SQLite + JSON の二層構造へ移行
-  - 同期対象データ（プロバイダ、MCP、Prompts、Skills）は SQLite に保存
-  - デバイス固有データ（ウィンドウ状態、ローカルパス）は JSON に保存
-  - 将来のクラウド同期の土台を用意
-  - DB マイグレーション用にスキーマバージョンを管理
-
-- **新しいユーザーインターフェース**
-  - レイアウトを全面再設計
-  - コンポーネントスタイルとアニメーションを統一
-  - 視覚的な階層を最適化
-  - ブラウザ互換性向上のため Tailwind CSS を v4 から v3.4 にダウングレード
-
-- **日本語対応**
-  - UI が中国語/英語/日本語の 3 言語対応に
-
-- **自動起動**
-  - 設定画面でワンクリック ON/OFF
-  - プラットフォームネイティブ API（Registry/LaunchAgent/XDG autostart）を使用
-
-- **Skills 再帰スキャン**
-  - 多階層ディレクトリをサポート
-  - リポジトリが異なる同名スキルを許可
-
-- **重要なバグ修正**
-  - プロバイダ更新時にカスタムエンドポイントが失われる問題を修正
-  - Gemini 設定の書き込み問題を修正
-  - Linux WebKitGTK の描画問題を修正
-
-**v3.7.0 ハイライト**
-
-**6 つのコア機能、18,000 行超の新コード**
-
-- **Gemini CLI 統合**
-  - Claude Code / Codex / Gemini の 3 番目のサポート AI CLI
-  - 2 つの設定ファイル（`.env` + `settings.json`）に対応
-  - MCP サーバー管理を完備
-  - プリセット：Google 公式（OAuth）/ PackyCode / カスタム
-
-- **Claude Skills 管理システム**
-  - GitHub リポジトリを自動スキャン（3 つのキュレーション済みリポジトリを同梱）
-  - `~/.claude/skills/` へワンクリックでインストール/アンインストール
-  - カスタムリポジトリ + サブディレクトリスキャンをサポート
-  - ライフサイクル管理（検出/インストール/更新）を完備
-
-- **Prompts 管理システム**
-  - 無制限のシステムプロンプトプリセットを作成
-  - Markdown エディタ（CodeMirror 6 + リアルタイムプレビュー）付き
-  - スマートなバックフィル保護で手動変更を保持
-  - 複数アプリに同時対応（Claude: `CLAUDE.md` / Codex: `AGENTS.md` / Gemini: `GEMINI.md`）
-
-- **MCP v3.7.0 統合アーキテクチャ**
-  - 1 つのパネルで 3 アプリの MCP を管理
-  - 新たに SSE（Server-Sent Events）トランスポートを追加
-  - スマート JSON パーサー + Codex TOML 自動修正
-  - 双方向のインポート/エクスポート + 双方向同期
-
-- **ディープリンクプロトコル**
-  - `ccswitch://` を全プラットフォームで登録
-  - 共有リンクからプロバイダ設定をワンクリックでインポート
-  - セキュリティ検証 + ライフサイクル統合
-
-- **環境変数の競合検知**
-  - Claude/Codex/Gemini/MCP 間の設定競合を自動検出
-  - 競合表示 + 解決ガイド
-  - 上書き前の警告 + バックアップ
-
-**コア機能**
-
-- **プロバイダ管理**：Claude Code、Codex、Gemini の API 設定をワンクリックで切り替え
-- **速度テスト**：エンドポイント遅延を計測し、品質を可視化
-- **インポート/エクスポート**：設定をバックアップ・復元（最新 10 件を自動ローテーション）
-- **多言語対応**：UI/エラー/トレイを含む中国語・英語・日本語ローカライズ
-- **Claude プラグイン同期**：Claude プラグイン設定をワンクリックで適用/復元
-
-**v3.6 ハイライト**
-
-- プロバイダの複製とドラッグ＆ドロップ並び替え
-- 複数エンドポイント管理とカスタム設定ディレクトリ（クラウド同期準備済み）
-- 4 階層のモデル設定（Haiku/Sonnet/Opus/Custom）
-- WSL 環境をサポートし、ディレクトリ変更時に自動同期
-- Hooks テスト 100% カバレッジ + アーキテクチャ全面リファクタ
-
-**システム機能**
-
-- クイックスイッチ付きシステムトレイ
-- シングルインスタンス常駐
-- ビルトイン自動アップデータ
-- ロールバック保護付きのアトミック書き込み
-
-## ダウンロード & インストール
-
-### システム要件
-
-- **Windows**: Windows 10 以上
-- **macOS**: macOS 10.15 (Catalina) 以上
-- **Linux**: Ubuntu 22.04+ / Debian 11+ / Fedora 34+ など主要ディストリビューション
-
-### Windows ユーザー
-
-[Releases](../../releases) ページから最新版の `CC-Switch-v{version}-Windows.msi` インストーラー、またはポータブル版 `CC-Switch-v{version}-Windows-Portable.zip` をダウンロード。
-
-### macOS ユーザー
-
-**方法 1: Homebrew でインストール（推奨）**
-
-```bash
-brew tap farion1231/ccswitch
-brew install --cask cc-switch
-```
-
-アップデート:
-
-```bash
-brew upgrade --cask cc-switch
-```
-
-**方法 2: 手動ダウンロード**
-
-[Releases](../../releases) から `CC-Switch-v{version}-macOS.zip` をダウンロードして展開。
-
-> **注意**: 開発者アカウント未登録のため、初回起動時に「開発元を確認できません」と表示される場合があります。一度閉じてから「システム設定」→「プライバシーとセキュリティ」→「このまま開く」をクリックしてください。以降は通常通り起動できます。
-
-### ArchLinux ユーザー
-
-**paru でインストール（推奨）**
-
-```bash
-paru -S cc-switch-bin
-```
-
-### Linux ユーザー
-
-[Releases](../../releases) から最新版の `CC-Switch-v{version}-Linux.deb` または `CC-Switch-v{version}-Linux.AppImage` をダウンロード。
-
-### Web 版（ヘッドレス / SSH サーバー）
-
-**Web 版が必要な理由**
-
-SSH 経由でリモートサーバーを操作する場合や、ヘッドレス環境（Docker コンテナ、CI/CD パイプライン、クラウドインスタンス）では、デスクトップ GUI を使用できません。Web 版はブラウザからアクセス可能なインターフェースを提供し、全機能を維持しながらこの問題を解決します。
-
-**ユースケース：**
-- 🖥️ SSH 経由のリモートサーバー管理
-- 🐳 X11/Wayland なしの Docker コンテナ
-- ☁️ クラウドインスタンス（AWS EC2、Azure VM、GCP Compute）
-- 🔄 AI CLI 設定が必要な CI/CD パイプライン
-- 🏢 ヘッドレスサーバー環境
-
-**ダウンロードと実行：**
-
-```bash
-# Web 版をダウンロード
-wget https://github.com/farion1231/cc-switch/releases/latest/download/cc-switch-web-linux-x64-v{version}.tar.gz
-
-# 解凍
-tar -xzf cc-switch-web-linux-x64-v{version}.tar.gz
-cd cc-switch-web/
-
-# 実行（デフォルトポート 17666）
-./cc-switch-web
-
-# カスタムポートを指定
-CC_SWITCH_PORT=8080 ./cc-switch-web
-
-# 全インターフェースでリッスン（リモートアクセス用）
-CC_SWITCH_HOST=0.0.0.0 ./cc-switch-web
-```
-
-ブラウザで `http://localhost:17666` を開きます（リモートアクセスの場合はサーバーの IP アドレスを使用）。
-
-**設定オプション：**
-
-| 環境変数 | デフォルト | 説明 |
-|---------|-----------|------|
-| `CC_SWITCH_PORT` | 17666 | サーバーポート |
-| `CC_SWITCH_HOST` | 127.0.0.1 | バインドアドレス（リモートは 0.0.0.0） |
-| `CC_SWITCH_AUTO_PORT` | true | ポート競合時に自動選択 |
-
-**パスワード保護（オプション）：**
-
-Web インスタンスにパスワード認証を有効化：
-
-```bash
-# パスワードハッシュを生成
-python3 -c "import bcrypt; print(bcrypt.hashpw(b'your-password', bcrypt.gensalt(12)).decode())"
-
-# 設定ファイルを作成
-cat > ~/.cc-switch/web-auth.json << 'EOF'
-{
-  "password_hash": "$2b$12$生成されたハッシュ"
-}
-EOF
-
-# サーバーを再起動 - 認証が有効化されます
-```
-
-特徴：
-- パスワードは bcrypt ハッシュで保存（不可逆）
-- セッション Cookie は 7 日間有効
-- HttpOnly + SameSite=Strict でセキュリティ確保
-- 設定ファイルを削除すると認証無効化
-
-詳細設定は [WEB_MODE.md](WEB_MODE.md) を参照。
-
-**システムサービスとして実行：**
-
-```bash
-# サービスをインストール（root 権限必要）
-sudo cp cc-switch-web /opt/
-sudo cp cc-switch-web.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable cc-switch-web
-sudo systemctl start cc-switch-web
-
-# ステータス確認
-sudo systemctl status cc-switch-web
-```
-
-**特徴：**
-- ✅ 全デスクトップ機能が利用可能（Provider/MCP/Skills/Prompts 管理）
-- ✅ WebSocket リアルタイム更新
-- ✅ デスクトップ版とデータ共有（`~/.cc-switch/`）
-- ✅ フロントエンド内蔵シングルバイナリ（19MB）
-- ✅ ゼロ依存（Node.js、データベースサーバー不要）
-- ✅ ポート競合時の自動選択
-
-**アーキテクチャ：**
-
-Web 版は Rust バックエンドと内蔵 React フロントエンドを使用し、WebSocket + JSON-RPC 2.0 プロトコルで通信します。すべてのデータはデスクトップ版と同じ SQLite データベース（`~/.cc-switch/cc-switch.db`）に保存されます。
-
-**ソースからビルド：**
-
-プリビルドバイナリをダウンロードする代わりにローカルでビルドする場合：
-
-```bash
-# リポジトリをクローン
-git clone https://github.com/farion1231/cc-switch.git
-cd cc-switch
-
-# ワンクリックビルド（推奨）
-./build-web-release.sh
-
-# 出力は release-web/ ディレクトリ
-cd release-web
-./cc-switch-web
-```
-
-ビルドスクリプトは自動的に：
-- 依存関係をチェック（cargo、node、pnpm）
-- フロントエンド依存をインストール
-- Web モードでフロントエンドをビルド
-- Rust バックエンドをコンパイル（release モード）
-- `cc-switch-web-linux-x64-v{version}.tar.gz` にパッケージ化
-
-**開発モード：**
-
-ホットリロード対応の開発モード：
-
-```bash
-# フロントエント開発サーバーとバックエンドを同時起動
-./start-web.sh
-
-# フロントエンド: http://localhost:3001（ホットリロード対応）
-# バックエンド: http://localhost:17666
-
-# 全サービスを停止
-./stop-web.sh
-```
-
-**手動ビルド手順：**
-
-```bash
-# 依存をインストール
-pnpm install
-
-# フロントエンドをビルド（web モード）
-pnpm build:web
-
-# バックエンドをビルド（release）
-cargo build --release --manifest-path crates/server/Cargo.toml
-
-# 実行
-./crates/server/target/release/cc-switch-web
-```
-
-## クイックスタート
-
-### 基本的な使い方
-
-1. **プロバイダ追加**：「Add Provider」をクリック → プリセットを選ぶかカスタム設定を作成
-2. **プロバイダ切り替え**:
-   - メイン UI: プロバイダを選択 → 「Enable」をクリック
-   - システムトレイ: プロバイダ名をクリック（即時反映）
-3. **反映**: ターミナルや Claude Code / Codex / Gemini クライアントを再起動して適用
-4. **公式設定に戻す**: 「Official Login」プリセット（Claude/Codex）または「Google Official」プリセット（Gemini）を選び、対応クライアントを再起動してログイン/OAuth を実行
-
-### MCP 管理
-
-- **入口**: 右上の「MCP」ボタンをクリック
-- **サーバー追加**:
-  - 組み込みテンプレート（mcp-fetch、mcp-filesystem など）を使用
-  - stdio / http / sse の各トランスポートをサポート
-  - アプリごとに独立した MCP を設定可能
-- **有効/無効**: トグルでライブ設定への同期を切り替え
-- **同期**: 有効なサーバーは各アプリのライブファイルへ自動同期
-- **インポート/エクスポート**: Claude/Codex/Gemini の設定ファイルから既存 MCP を取り込み
-
-### Skills 管理 (v3.7.0 新機能)
-
-- **入口**: 右上の「Skills」ボタンをクリック
-- **スキル探索**:
-  - 事前設定済みの GitHub リポジトリを自動スキャン（Anthropic 公式、ComposioHQ、コミュニティなど）
-  - カスタムリポジトリを追加（サブディレクトリスキャン対応）
-- **インストール**: 「Install」を押すだけで `~/.claude/skills/` に配置
-- **アンインストール**: 「Uninstall」で安全に削除と状態クリーンアップ
-- **リポジトリ管理**: カスタム GitHub リポジトリを追加/削除
-
-### Prompts 管理 (v3.7.0 新機能)
-
-- **入口**: 右上の「Prompts」ボタンをクリック
-- **プリセット作成**:
-  - 無制限のシステムプロンプトプリセットを作成
-  - Markdown エディタで記述（シンタックスハイライト + リアルタイムプレビュー）
-- **プリセット切り替え**: プリセットを選択 → 「Activate」で即適用
-- **同期先**:
-  - Claude: `~/.claude/CLAUDE.md`
-  - Codex: `~/.codex/AGENTS.md`
-  - Gemini: `~/.gemini/GEMINI.md`
-- **保護機構**: 切り替え前に現在の内容を自動保存し、手動変更を保持
-
-### 設定ファイルパス
-
-**Claude Code**
-
-- ライブ設定: `~/.claude/settings.json`（または `claude.json`）
-- API キーフィールド: `env.ANTHROPIC_AUTH_TOKEN` または `env.ANTHROPIC_API_KEY`
-- MCP サーバー: `~/.claude.json` → `mcpServers`
-
-**Codex**
-
-- ライブ設定: `~/.codex/auth.json`（必須）+ `config.toml`（任意）
-- API キーフィールド: `auth.json` 内の `OPENAI_API_KEY`
-- MCP サーバー: `~/.codex/config.toml` → `[mcp_servers]` テーブル
-
-**Gemini**
-
-- ライブ設定: `~/.gemini/.env`（API キー）+ `~/.gemini/settings.json`（認証モード）
-- API キーフィールド: `.env` 内の `GEMINI_API_KEY` または `GOOGLE_GEMINI_API_KEY`
-- 環境変数: `GOOGLE_GEMINI_BASE_URL`、`GEMINI_MODEL` などをサポート
-- MCP サーバー: `~/.gemini/settings.json` → `mcpServers`
-- トレイでのクイックスイッチ: プロバイダ切り替えごとに `~/.gemini/.env` を書き換えるため Gemini CLI の再起動は不要
-
-**CC Switch 保存先 (v3.8.0 新アーキテクチャ)**
-
-- データベース (SSOT): `~/.cc-switch/cc-switch.db`（SQLite。プロバイダ、MCP、Prompts、Skills を保存）
-- ローカル設定: `~/.cc-switch/settings.json`（デバイスレベル設定）
-- バックアップ: `~/.cc-switch/backups/`（自動ローテーション、最新 10 件を保持）
-
-### クラウド同期の設定
-
-1. 設定 → 「Custom Configuration Directory」へ進む
-2. クラウド同期フォルダ（Dropbox、OneDrive、iCloud など）を選択
-3. アプリを再起動して反映
-4. 他のデバイスでも同じフォルダを指定すればクロスデバイス同期が有効に
-
-> **補足**: 初回起動時に既存の Claude/Codex 設定をデフォルトプロバイダとして自動インポートします。
-
-## アーキテクチャ概要
-
-### 設計原則
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Frontend (React + TS)                    │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐    │
-│  │ Components  │  │    Hooks     │  │  TanStack Query  │    │
-│  │   (UI)      │──│ (Bus. Logic) │──│   (Cache/Sync)   │    │
-│  └─────────────┘  └──────────────┘  └──────────────────┘    │
-└────────────────────────┬────────────────────────────────────┘
-                         │ Tauri IPC
-┌────────────────────────▼────────────────────────────────────┐
-│                  Backend (Tauri + Rust)                     │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐    │
-│  │  Commands   │  │   Services   │  │  Models/Config   │    │
-│  │ (API Layer) │──│ (Bus. Layer) │──│     (Data)       │    │
-│  └─────────────┘  └──────────────┘  └──────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**コア設計パターン**
-
-- **SSOT** (Single Source of Truth): すべてのデータを `~/.cc-switch/cc-switch.db`（SQLite）に集約
-- **二層ストレージ**: 同期データは SQLite、デバイスデータは JSON
-- **双方向同期**: 切り替え時はライブファイルへ書き込み、編集時はアクティブプロバイダから逆同期
-- **アトミック書き込み**: 一時ファイル + rename パターンで設定破損を防止
-- **並行安全**: Mutex で保護された DB 接続でレースを防ぐ
-- **レイヤードアーキテクチャ**: Commands → Services → DAO → Database を明確に分離
-
-**主要コンポーネント**
-
-- **ProviderService**: プロバイダの CRUD、切り替え、バックフィル、ソート
-- **McpService**: MCP サーバー管理、インポート/エクスポート、ライブファイル同期
-- **ConfigService**: 設定のインポート/エクスポート、バックアップローテーション
-- **SpeedtestService**: API エンドポイントの遅延計測
-
-**v3.6 リファクタリング**
-
-- バックエンド: エラーハンドリング → コマンド分割 → テスト → サービス層 → 並行性の 5 フェーズ
-- フロントエンド: テスト基盤 → hooks → コンポーネント → クリーンアップの 4 ステージ
-- テスト: hooks 100% カバレッジ + 統合テスト（vitest + MSW）
-
-## 開発
-
-### 開発環境
+### 必要環境
 
 - Node.js 18+
 - pnpm 8+
 - Rust 1.85+
 - Tauri CLI 2.8+
 
-### 開発コマンド
+### よく使うコマンド
 
 ```bash
 # 依存関係をインストール
 pnpm install
 
-# ホットリロード付き開発モード
+# デスクトップ開発
 pnpm dev
 
 # 型チェック
 pnpm typecheck
 
-# コード整形
-pnpm format
-
-# フォーマット検証
-pnpm format:check
-
 # フロントエンド単体テスト
 pnpm test:unit
 
-# ウォッチモード（開発に推奨）
-pnpm test:unit:watch
-
-# アプリをビルド
+# デスクトップ版をビルド
 pnpm build
-
-# デバッグビルド
-pnpm tauri build --debug
 ```
 
-### Rust バックエンド開発
+### Rust バックエンド
 
 ```bash
 cd src-tauri
 
-# Rust コード整形
 cargo fmt
-
-# clippy チェック
 cargo clippy
-
-# バックエンドテスト
 cargo test
-
-# 特定テストのみ実行
-cargo test test_name
-
-# test-hooks フィーチャー付きでテスト
-cargo test --features test-hooks
 ```
 
-### テストガイド (v3.6)
+## Web モード
 
-**フロントエンドテスト**:
-
-- テストフレームワークに **vitest** を使用
-- **MSW (Mock Service Worker)** で Tauri API 呼び出しをモック
-- コンポーネントテストに **@testing-library/react** を採用
-
-**テストカバレッジ**:
-
-- Hooks の単体テスト（100% カバレッジ）
-  - `useProviderActions` - プロバイダ操作
-  - `useMcpActions` - MCP 管理
-  - `useSettings` 系 - 設定管理
-  - `useImportExport` - インポート/エクスポート
-- 統合テスト
-  - アプリのメインフロー
-  - SettingsDialog の一連操作
-  - MCP パネルの機能
-
-**テスト実行**:
+### 単一ポート起動
 
 ```bash
-# 全テストを実行
-pnpm test:unit
+./start-web.sh
+```
 
-# ウォッチモード（自動再実行）
-pnpm test:unit:watch
+起動後のアクセス先：
 
-# カバレッジレポート付き
-pnpm test:unit --coverage
+```text
+http://localhost:17666
+```
+
+停止：
+
+```bash
+./stop-web.sh
+```
+
+実行時ファイルは既定で `./.run/web/` に書き込まれます。
+
+- ログ：`backend.log`
+- PID：`backend.pid`
+
+別ディレクトリを使う場合：
+
+```bash
+CC_SWITCH_RUNTIME_DIR=/tmp/cc-switch-web ./start-web.sh
+```
+
+### 手動デバッグ
+
+```bash
+# Web バックエンドを起動
+pnpm dev:server
+
+# フロントエンド開発サーバーを起動（ホットリロード）
+pnpm dev:web
+```
+
+補足：
+
+- `17666`：バックエンド、Web UI、`/api`、`/api/ws`
+- `3000`：手動フロントエンド開発時だけ使う Vite dev server
+
+### 手動で Web ビルド
+
+```bash
+pnpm build:web
+cargo build --release --manifest-path crates/server/Cargo.toml
+./crates/server/target/release/cc-switch-web
 ```
 
 ## 技術スタック
 
-**フロントエンド**: React 18 · TypeScript · Vite · TailwindCSS 4 · TanStack Query v5 · react-i18next · react-hook-form · zod · shadcn/ui · @dnd-kit
+- フロントエンド：React 18、TypeScript、Vite、TailwindCSS、TanStack Query
+- バックエンド：Tauri 2、Rust、tokio、serde
+- テスト：vitest、MSW、@testing-library/react
 
-**バックエンド**: Tauri 2.8 · Rust · serde · tokio · thiserror · tauri-plugin-updater/process/dialog/store/log
+## ディレクトリ構成
 
-**テスト**: vitest · MSW · @testing-library/react
-
-## プロジェクト構成
-
+```text
+src/                 フロントエンドコード
+src-tauri/           Tauri デスクトップバックエンド
+crates/server/       Web サーバー
+crates/core/         共通コアロジック
+tests/               フロントエンドテスト
+assets/              スクリーンショットなどの素材
+docs/                補助ドキュメント
 ```
-├── src/                      # フロントエンド (React + TypeScript)
-│   ├── components/           # UI コンポーネント (providers/settings/mcp/ui)
-│   ├── hooks/                # ビジネスロジック用カスタムフック
-│   ├── lib/
-│   │   ├── api/              # Tauri API ラッパー (型安全)
-│   │   └── query/            # TanStack Query 設定
-│   ├── i18n/locales/         # 翻訳 (zh/en)
-│   ├── config/               # プリセット (providers/mcp)
-│   └── types/                # TypeScript 型定義
-├── src-tauri/                # バックエンド (Rust)
-│   └── src/
-│       ├── commands/         # Tauri コマンド層 (ドメイン別)
-│       ├── services/         # ビジネスロジック層
-│       ├── app_config.rs     # 設定モデル
-│       ├── provider.rs       # プロバイダドメインモデル
-│       ├── mcp.rs            # MCP 同期 & 検証
-│       └── lib.rs            # アプリエントリ & トレイメニュー
-├── tests/                    # フロントエンドテスト
-│   ├── hooks/                # 単体テスト
-│   └── components/           # 統合テスト
-└── assets/                   # スクリーンショット & スポンサーリソース
-```
-
-## 更新履歴
-
-詳細は [CHANGELOG.md](CHANGELOG.md) をご覧ください。
-
-## 旧 Electron 版
-
-[Releases](../../releases) に v2.0.3 の Electron 旧版を残しています。
-
-旧版コードが必要な場合は `electron-legacy` ブランチを取得してください。
-
-## 貢献
-
-Issue や提案を歓迎します！
-
-PR を送る前に以下をご確認ください:
-
-- 型チェック: `pnpm typecheck`
-- フォーマットチェック: `pnpm format:check`
-- 単体テスト: `pnpm test:unit`
-- 💡 新機能の場合は、事前に Issue でディスカッションしていただけると助かります
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=farion1231/cc-switch&type=Date)](https://www.star-history.com/#farion1231/cc-switch&Date)
 
 ## ライセンス
 
-MIT © Jason Young
+[LICENSE](LICENSE) を参照してください。

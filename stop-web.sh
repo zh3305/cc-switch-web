@@ -14,9 +14,7 @@ PROJECT_ROOT="$(cd -P "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 
 RUNTIME_DIR="${CC_SWITCH_RUNTIME_DIR:-$PROJECT_ROOT/.run/web}"
 BACKEND_PID_FILE="$RUNTIME_DIR/backend.pid"
-FRONTEND_PID_FILE="$RUNTIME_DIR/frontend.pid"
 BACKEND_PORT="${CC_SWITCH_PORT:-17666}"
-FRONTEND_PORT="${CC_SWITCH_WEB_PORT:-3001}"
 
 is_pid_running() {
     local pid="${1:-}"
@@ -81,14 +79,7 @@ stop_from_pid_file() {
 
 echo "🛑 Stopping CC-Switch Web Mode..."
 
-stop_from_pid_file "$FRONTEND_PID_FILE" "frontend"
 stop_from_pid_file "$BACKEND_PID_FILE" "backend"
-
-for pid in $(find_port_pids "$FRONTEND_PORT"); do
-    if is_pid_running "$pid"; then
-        stop_pid "$pid" "frontend(port $FRONTEND_PORT)"
-    fi
-done
 
 for pid in $(find_port_pids "$BACKEND_PORT"); do
     if is_pid_running "$pid"; then
@@ -96,6 +87,6 @@ for pid in $(find_port_pids "$BACKEND_PORT"); do
     fi
 done
 
-rm -f "$FRONTEND_PID_FILE" "$BACKEND_PID_FILE"
+rm -f "$BACKEND_PID_FILE"
 
-echo "✓ All services stopped"
+echo "✓ Web service stopped"

@@ -16,14 +16,10 @@ cd "$PROJECT_ROOT"
 
 RUNTIME_DIR="${CC_SWITCH_RUNTIME_DIR:-$PROJECT_ROOT/.run/web}"
 BACKEND_LOG_FILE="$RUNTIME_DIR/backend.log"
-FRONTEND_LOG_FILE="$RUNTIME_DIR/frontend.log"
 BACKEND_PID_FILE="$RUNTIME_DIR/backend.pid"
-FRONTEND_PID_FILE="$RUNTIME_DIR/frontend.pid"
 
 BACKEND_HOST="${CC_SWITCH_HOST:-127.0.0.1}"
 BACKEND_PORT="${CC_SWITCH_PORT:-17666}"
-FRONTEND_HOST="${CC_SWITCH_WEB_HOST:-127.0.0.1}"
-FRONTEND_PORT="${CC_SWITCH_WEB_PORT:-3001}"
 START_TIMEOUT="${CC_SWITCH_START_TIMEOUT:-30}"
 
 BACKEND_BIN="$PROJECT_ROOT/crates/server/target/release/cc-switch-web"
@@ -146,35 +142,12 @@ start_detached() {
     printf '%s\n' "$!"
 }
 
-resolve_frontend_command() {
-    if command -v pnpm >/dev/null 2>&1; then
-        FRONTEND_CMD=(pnpm exec vite)
-        return
-    fi
-
-    if command -v npx >/dev/null 2>&1; then
-        FRONTEND_CMD=(npx vite)
-        return
-    fi
-
-    echo "❌ Error: pnpm or npx not found. Please install pnpm or npm."
-    exit 1
-}
-
 cleanup_stale_pid_file "$BACKEND_PID_FILE"
-cleanup_stale_pid_file "$FRONTEND_PID_FILE"
 
 BACKEND_PROBE_HOST="$(probe_host_for "$BACKEND_HOST")"
-FRONTEND_PROBE_HOST="$(probe_host_for "$FRONTEND_HOST")"
 
 if pid="$(read_pid_file "$BACKEND_PID_FILE" 2>/dev/null || true)"; [[ -n "$pid" ]] && is_pid_running "$pid"; then
     echo "❌ Backend is already running (PID: $pid)"
-    echo "   Stop it first: ./stop-web.sh"
-    exit 1
-fi
-
-if pid="$(read_pid_file "$FRONTEND_PID_FILE" 2>/dev/null || true)"; [[ -n "$pid" ]] && is_pid_running "$pid"; then
-    echo "❌ Frontend is already running (PID: $pid)"
     echo "   Stop it first: ./stop-web.sh"
     exit 1
 fi
@@ -185,20 +158,12 @@ if probe_tcp "$BACKEND_PROBE_HOST" "$BACKEND_PORT"; then
     exit 1
 fi
 
-if probe_tcp "$FRONTEND_PROBE_HOST" "$FRONTEND_PORT"; then
-    echo "❌ Frontend port $FRONTEND_PORT is already in use"
-    echo "   Stop the existing service or set CC_SWITCH_WEB_PORT to another port."
-    exit 1
-fi
-
 echo "🚀 CC-Switch Web Mode Launcher"
 echo "================================"
 echo ""
 
 require_command cargo "cargo not found. Please install Rust."
 require_command node "node not found. Please install Node.js."
-
-resolve_frontend_command
 
 echo "📦 Runtime directory: $RUNTIME_DIR"
 echo "🎨 Building frontend assets..."
@@ -217,10 +182,9 @@ if [[ ! -x "$BACKEND_BIN" ]]; then
 fi
 
 : >"$BACKEND_LOG_FILE"
-: >"$FRONTEND_LOG_FILE"
 
 echo ""
-echo "🎯 Starting services in background..."
+echo "🎯 Starting service in background..."
 echo ""
 
 echo "▶ Starting backend on http://$BACKEND_HOST:$BACKEND_PORT"
@@ -234,26 +198,12 @@ fi
 
 echo "  ✓ Backend is running (PID: $BACKEND_PID)"
 echo ""
-
-echo "▶ Starting frontend on http://$FRONTEND_HOST:$FRONTEND_PORT"
-FRONTEND_PID="$(start_detached "$FRONTEND_LOG_FILE" env CC_SWITCH_PORT="$BACKEND_PORT" "${FRONTEND_CMD[@]}" --mode web --host "$FRONTEND_HOST" --port "$FRONTEND_PORT" --strictPort)"
-printf '%s\n' "$FRONTEND_PID" >"$FRONTEND_PID_FILE"
-
-if ! wait_for_http "Frontend" "$FRONTEND_PID" "$FRONTEND_PROBE_HOST" "$FRONTEND_PORT" "/" "$FRONTEND_LOG_FILE"; then
-    kill "$BACKEND_PID" 2>/dev/null || true
-    rm -f "$BACKEND_PID_FILE" "$FRONTEND_PID_FILE"
-    exit 1
-fi
-
-echo "  ✓ Frontend is running (PID: $FRONTEND_PID)"
-echo ""
 echo "================================"
 echo "✨ CC-Switch Web Mode is ready!"
 echo ""
-echo "  Frontend: http://$FRONTEND_HOST:$FRONTEND_PORT"
-echo "  Backend:  http://$BACKEND_HOST:$BACKEND_PORT"
+echo "  Web UI:   http://$BACKEND_HOST:$BACKEND_PORT"
+echo "  API:      http://$BACKEND_HOST:$BACKEND_PORT/api"
 echo ""
-echo "  Backend logs:  tail -f $BACKEND_LOG_FILE"
-echo "  Frontend logs: tail -f $FRONTEND_LOG_FILE"
-echo "  Stop all:      ./stop-web.sh"
+echo "  Logs:     tail -f $BACKEND_LOG_FILE"
+echo "  Stop:     ./stop-web.sh"
 echo "================================"

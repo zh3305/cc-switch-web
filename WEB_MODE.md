@@ -1,17 +1,21 @@
 # CC-Switch Web 模式使用指南
 
-CC-Switch 现在支持 Web 模式，通过 WebSocket + JSON-RPC 2.0 协议访问后端服务。
+CC-Switch 现在支持 Web 模式，通过单端口 `17666` 同时提供 Web 界面和后端服务。
 
 ## 架构
 
 ```
-┌─────────────────┐    WebSocket     ┌──────────────────┐
-│  Web Frontend   │ ←──────────────→ │  Rust Backend    │
-│  (localhost:3001) │   JSON-RPC 2.0   │  (localhost:17666)│
-└─────────────────┘                  └──────────────────┘
-                                              │
-                                              ↓
-                                     ~/.cc-switch/cc-switch.db
+┌──────────────────────────────────────────────┐
+│          Rust Backend + Embedded SPA         │
+│            (localhost:17666)                 │
+├──────────────────────────────────────────────┤
+│  /        Web UI                             │
+│  /api     JSON-RPC API                       │
+│  /api/ws  WebSocket                          │
+└──────────────────────────────────────────────┘
+                      │
+                      ↓
+             ~/.cc-switch/cc-switch.db
 ```
 
 ## 快速开始
@@ -22,7 +26,7 @@ CC-Switch 现在支持 Web 模式，通过 WebSocket + JSON-RPC 2.0 协议访问
 ./start-web.sh
 ```
 
-服务启动后访问：**http://localhost:3001**
+服务启动后访问：**http://localhost:17666**
 
 脚本会在后台启动服务，并立即返回当前 shell。
 默认运行时文件目录：`./.run/web/`
@@ -39,7 +43,7 @@ CC-Switch 现在支持 Web 模式，通过 WebSocket + JSON-RPC 2.0 协议访问
 CC_SWITCH_RUNTIME_DIR=/tmp/cc-switch-web ./start-web.sh
 ```
 
-## 手动启动（开发模式）
+## 手动启动（开发/调试）
 
 ### 1. 启动后端
 
@@ -53,13 +57,13 @@ cargo run --release --manifest-path crates/server/Cargo.toml
 
 后端将在 `http://localhost:17666` 启动
 
-### 2. 启动前端
+### 2. 启动前端开发服务器（仅热重载开发需要）
 
 ```bash
 npx vite --mode web --port 3001
 ```
 
-前端将在 `http://localhost:3001` 启动
+前端开发服务器将在 `http://localhost:3001` 启动，并将 `/api` 代理到 `17666`
 
 ## 使用 package.json 脚本
 
@@ -152,8 +156,8 @@ nano ~/.cc-switch/web-auth.json
 
 ## 端口说明
 
-- **前端**: `3001` - Web 界面
-- **后端**: `17666` - JSON-RPC API 服务器
+- **单端口入口**: `17666` - Web 界面 + JSON-RPC API
+  - Web UI: `http://localhost:17666/`
   - HTTP: `http://localhost:17666/api/invoke`
   - WebSocket: `ws://localhost:17666/api/ws`
 
@@ -197,7 +201,7 @@ tail -f /tmp/cc-switch-backend.log
 ### 前端无法连接后端
 
 1. 确认后端已启动：`curl http://localhost:17666/`
-2. 检查代理配置：`vite.config.mts` 中的 proxy 设置
+2. 如果你在用 `3001` 开发服务器，检查 `vite.config.ts` 中的 proxy 设置
 3. 查看浏览器控制台是否有错误
 
 ### 数据不同步

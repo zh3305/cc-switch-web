@@ -1,22 +1,20 @@
 <div align="center">
 
-# Claude Code / Codex / Gemini CLI 全方位辅助工具
+# CC Switch Fork
 
-[![Version](https://img.shields.io/badge/version-3.8.2-blue.svg)](https://github.com/farion1231/cc-switch/releases)
-[![Trending](https://img.shields.io/badge/🔥_TypeScript_Trending-Daily%20%7C%20Weekly%20%7C%20Monthly-ff6b6b.svg)](https://github.com/trending/typescript)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/farion1231/cc-switch/releases)
-[![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
-[![Downloads](https://img.shields.io/endpoint?url=https://api.pinstudios.net/api/badges/downloads/farion1231/cc-switch/total)](https://github.com/farion1231/cc-switch/releases/latest)
+[English](README.md) | 中文 | [日本語](README_JA.md)
 
-<a href="https://trendshift.io/repositories/15372" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15372" alt="farion1231%2Fcc-switch | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-
-[English](README.md) | 中文 | [日本語](README_JA.md) | [更新日志](CHANGELOG.md) | [v3.8.0 发布说明](docs/release-note-v3.8.0-zh.md)
-
-**从供应商切换器到 AI CLI 一体化管理平台**
-
-统一管理 Claude Code、Codex 与 Gemini CLI 的供应商配置、MCP 服务器、Skills 扩展和系统提示词。
+当前仓库是基于 `cc-switch` 的 fork，README 仅保留与本仓库当前开发、构建和运行方式直接相关的内容。
 
 </div>
+
+## 项目定位
+
+这个 fork 主要用于本地定制和持续开发，核心能力包括：
+
+- 管理 Claude Code、Codex、Gemini、OpenCode、OpenClaw 的配置
+- 管理 MCP、Prompts、Skills、代理服务、故障转移和使用量功能
+- 提供 Tauri 桌面端和单端口 Web 模式
 
 ## 界面预览
 
@@ -24,436 +22,7 @@
 | :---------------------------------------: | :------------------------------------------: |
 | ![主界面](assets/screenshots/main-zh.png) | ![添加供应商](assets/screenshots/add-zh.png) |
 
-## 功能特性
-
-### 当前版本：v3.8.2 | [完整更新日志](CHANGELOG.md)
-
-**v3.8.0 重大更新（2025-11-28）**
-
-**持久化架构升级 & 全新用户界面**
-
-- **SQLite + JSON 双层架构**
-  - 从 JSON 文件存储迁移到 SQLite + JSON 双层结构
-  - 可同步数据（供应商、MCP、Prompts、Skills）存入 SQLite
-  - 设备级数据（窗口状态、本地路径）保留在 JSON
-  - 为未来云同步功能奠定基础
-  - Schema 版本管理支持数据库迁移
-
-- **全新用户界面**
-  - 完全重新设计的界面布局
-  - 统一的组件样式和更流畅的动画
-  - 优化的视觉层次
-  - Tailwind CSS 从 v4 降级到 v3.4 以提升浏览器兼容性
-
-- **日语支持**
-  - 新增日语界面支持（现支持中文/英文/日语）
-
-- **开机自启**
-  - 在设置中一键开启/关闭
-  - 使用平台原生 API（注册表/LaunchAgent/XDG autostart）
-
-- **Skills 递归扫描**
-  - 支持多层目录结构
-  - 允许不同仓库的同名技能
-
-- **关键 Bug 修复**
-  - 修复更新供应商时自定义端点丢失问题
-  - 修复 Gemini 配置写入问题
-  - 修复 Linux WebKitGTK 渲染问题
-
-**v3.7.0 亮点**
-
-**六大核心功能，18,000+ 行新增代码**
-
-- **Gemini CLI 集成**
-  - 第三个支持的 AI CLI（Claude Code / Codex / Gemini）
-  - 双文件配置支持（`.env` + `settings.json`）
-  - 完整 MCP 服务器管理
-  - 预设：Google Official (OAuth) / PackyCode / 自定义
-
-- **Claude Skills 管理系统**
-  - 从 GitHub 仓库自动扫描技能（预配置 3 个精选仓库）
-  - 一键安装/卸载到 `~/.claude/skills/`
-  - 自定义仓库支持 + 子目录扫描
-  - 完整生命周期管理（发现/安装/更新）
-
-- **Prompts 管理系统**
-  - 多预设系统提示词管理（无限数量，快速切换）
-  - 跨应用支持（Claude: `CLAUDE.md` / Codex: `AGENTS.md` / Gemini: `GEMINI.md`）
-  - Markdown 编辑器（CodeMirror 6 + 实时预览）
-  - 智能回填保护，保留手动修改
-
-- **MCP v3.7.0 统一架构**
-  - 单一面板管理三个应用的 MCP 服务器
-  - 新增 SSE (Server-Sent Events) 传输类型
-  - 智能 JSON 解析器 + Codex TOML 格式自动修正
-  - 统一导入/导出 + 双向同步
-
-- **深度链接协议**
-  - `ccswitch://` 协议注册（全平台）
-  - 通过共享链接一键导入供应商配置
-  - 安全验证 + 生命周期集成
-
-- **环境变量冲突检测**
-  - 自动检测跨应用配置冲突（Claude/Codex/Gemini/MCP）
-  - 可视化冲突指示器 + 解决建议
-  - 覆盖警告 + 更改前备份
-
-**核心功能**
-
-- **供应商管理**：一键切换 Claude Code、Codex 与 Gemini 的 API 配置
-- **速度测试**：测量 API 端点延迟，可视化连接质量指示器
-- **导入导出**：备份和恢复配置，自动轮换（保留最近 10 个）
-- **国际化支持**：完整的中英文本地化（UI、错误、托盘）
-- **Claude 插件同步**：一键应用或恢复 Claude 插件配置
-
-**v3.6 亮点**
-
-- 供应商复制 & 拖拽排序
-- 多端点管理 & 自定义配置目录（支持云同步）
-- 细粒度模型配置（四层：Haiku/Sonnet/Opus/自定义）
-- WSL 环境支持，配置目录切换自动同步
-- 100% hooks 测试覆盖 & 完整架构重构
-
-**系统功能**
-
-- 系统托盘快速切换
-- 单实例守护
-- 内置自动更新器
-- 原子写入与回滚保护
-
-## 下载安装
-
-### 系统要求
-
-- **Windows**: Windows 10 及以上
-- **macOS**: macOS 10.15 (Catalina) 及以上
-- **Linux**: Ubuntu 22.04+ / Debian 11+ / Fedora 34+ 等主流发行版
-
-### Windows 用户
-
-从 [Releases](../../releases) 页面下载最新版本的 `CC-Switch-v{版本号}-Windows.msi` 安装包或者 `CC-Switch-v{版本号}-Windows-Portable.zip` 绿色版。
-
-### macOS 用户
-
-**方式一：通过 Homebrew 安装（推荐）**
-
-```bash
-brew tap farion1231/ccswitch
-brew install --cask cc-switch
-```
-
-更新：
-
-```bash
-brew upgrade --cask cc-switch
-```
-
-**方式二：手动下载**
-
-从 [Releases](../../releases) 页面下载 `CC-Switch-v{版本号}-macOS.zip` 解压使用。
-
-> **注意**：由于作者没有苹果开发者账号，首次打开可能出现"未知开发者"警告，请先关闭，然后前往"系统设置" → "隐私与安全性" → 点击"仍要打开"，之后便可以正常打开
-
-### ArchLinux 用户
-
-**通过 paru 安装（推荐）**
-
-```bash
-paru -S cc-switch-bin
-```
-
-### Linux 用户
-
-从 [Releases](../../releases) 页面下载最新版本的 `CC-Switch-v{版本号}-Linux.deb` 包或者 `CC-Switch-v{版本号}-Linux.AppImage` 安装包。
-
-### Web 版本（无头/SSH 服务器）
-
-**为什么需要 Web 版本？**
-
-当通过 SSH 在远程服务器上工作，或在无头环境（Docker 容器、CI/CD 流水线、云实例）中时，无法使用桌面 GUI。Web 版本通过提供浏览器可访问的界面解决了这个问题，同时保留了完整功能。
-
-**使用场景：**
-- 🖥️ 通过 SSH 管理远程服务器
-- 🐳 没有 X11/Wayland 的 Docker 容器
-- ☁️ 云实例（AWS EC2、Azure VM、GCP Compute）
-- 🔄 需要配置 AI CLI 的 CI/CD 流水线
-- 🏢 无头服务器环境
-
-**下载和运行：**
-
-```bash
-# 下载 Web 版本
-wget https://github.com/farion1231/cc-switch/releases/latest/download/cc-switch-web-linux-x64-v{版本号}.tar.gz
-
-# 解压
-tar -xzf cc-switch-web-linux-x64-v{版本号}.tar.gz
-cd cc-switch-web/
-
-# 运行（默认端口 17666）
-./cc-switch-web
-
-# 或指定自定义端口
-CC_SWITCH_PORT=8080 ./cc-switch-web
-
-# 监听所有接口以供远程访问
-CC_SWITCH_HOST=0.0.0.0 ./cc-switch-web
-```
-
-然后在浏览器中打开 `http://localhost:17666`（如果远程访问则使用服务器的 IP 地址）。
-
-**配置选项：**
-
-| 环境变量 | 默认值 | 说明 |
-|---------|--------|------|
-| `CC_SWITCH_PORT` | 17666 | 服务器端口 |
-| `CC_SWITCH_HOST` | 127.0.0.1 | 绑定地址（远程访问用 0.0.0.0） |
-| `CC_SWITCH_AUTO_PORT` | true | 端口被占用时自动选择下一个 |
-
-**密码保护（可选）：**
-
-为 Web 实例启用密码认证：
-
-```bash
-# 生成密码哈希
-python3 -c "import bcrypt; print(bcrypt.hashpw(b'your-password', bcrypt.gensalt(12)).decode())"
-
-# 创建配置文件
-cat > ~/.cc-switch/web-auth.json << 'EOF'
-{
-  "password_hash": "$2b$12$生成的哈希值"
-}
-EOF
-
-# 重启服务器 - 认证自动启用
-```
-
-特性：
-- 密码以 bcrypt 哈希存储（不可逆）
-- 会话 Cookie 7 天有效期
-- HttpOnly + SameSite=Strict 安全策略
-- 删除配置文件即可禁用认证
-
-详细配置请参阅 [WEB_MODE.md](WEB_MODE.md)。
-
-**作为系统服务运行：**
-
-```bash
-# 安装服务（需要 root）
-sudo cp cc-switch-web /opt/
-sudo cp cc-switch-web.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable cc-switch-web
-sudo systemctl start cc-switch-web
-
-# 检查状态
-sudo systemctl status cc-switch-web
-```
-
-**特性：**
-- ✅ 所有桌面功能可用（Provider/MCP/Skills/Prompts 管理）
-- ✅ WebSocket 实时更新
-- ✅ 与桌面版本共享数据（`~/.cc-switch/`）
-- ✅ 内嵌前端的单一二进制文件（19MB）
-- ✅ 零依赖（不需要 Node.js，不需要数据库服务器）
-- ✅ 端口冲突时自动选择
-
-**架构：**
-
-Web 版本使用 Rust 后端，内嵌 React 前端，通过 WebSocket + JSON-RPC 2.0 协议通信。所有数据存储在与桌面版本相同的 SQLite 数据库（`~/.cc-switch/cc-switch.db`）中。
-
-**从源码构建：**
-
-如果你想在本地构建 Web 版本而不是下载预编译二进制文件：
-
-```bash
-# 克隆仓库
-git clone https://github.com/farion1231/cc-switch.git
-cd cc-switch
-
-# 一键构建（推荐）
-./build-web-release.sh
-
-# 输出在 release-web/ 目录
-cd release-web
-./cc-switch-web
-```
-
-构建脚本会自动：
-- 检查依赖（cargo、node、pnpm）
-- 安装前端依赖
-- 以 web 模式构建前端
-- 编译 Rust 后端（release 模式）
-- 打包为 `cc-switch-web-linux-x64-v{版本号}.tar.gz`
-
-**开发模式：**
-
-支持热重载的开发模式：
-
-```bash
-# 在后台同时启动前端开发服务器和后端
-./start-web.sh
-
-# 前端: http://localhost:3001（支持热重载）
-# 后端: http://localhost:17666
-
-# 停止所有服务
-./stop-web.sh
-```
-
-运行时文件默认写入 `./.run/web/`：
-- 日志：`backend.log`、`frontend.log`
-- PID：`backend.pid`、`frontend.pid`
-
-如果在 `chroot` 或其他受限环境里不想写入项目目录，可以覆盖：
-
-```bash
-CC_SWITCH_RUNTIME_DIR=/tmp/cc-switch-web ./start-web.sh
-```
-
-**手动构建步骤：**
-
-```bash
-# 安装依赖
-pnpm install
-
-# 构建前端（web 模式）
-pnpm build:web
-
-# 构建后端（release）
-cargo build --release --manifest-path crates/server/Cargo.toml
-
-# 运行
-./crates/server/target/release/cc-switch-web
-```
-
-## 快速开始
-
-### 基本使用
-
-1. **添加供应商**：点击"添加供应商" → 选择预设或创建自定义配置
-2. **切换供应商**：
-   - 主界面：选择供应商 → 点击"启用"
-   - 系统托盘：直接点击供应商名称（立即生效）
-3. **生效方式**：重启终端或 Claude Code / Codex / Gemini 客户端以应用更改
-4. **恢复官方登录**：选择"官方登录"预设（Claude/Codex）或"Google 官方"预设（Gemini），重启对应客户端后按照其登录/OAuth 流程操作
-
-### MCP 管理
-
-- **位置**：点击右上角"MCP"按钮
-- **添加服务器**：
-  - 使用内置模板（mcp-fetch、mcp-filesystem 等）
-  - 支持 stdio / http / sse 三种传输类型
-  - 为不同应用配置独立的 MCP 服务器
-- **启用/禁用**：切换开关以控制哪些服务器同步到 live 配置
-- **同步**：启用的服务器自动同步到各应用的 live 文件
-- **导入/导出**：支持从 Claude/Codex/Gemini 配置文件导入现有 MCP 服务器
-
-### Skills 管理（v3.7.0 新增）
-
-- **位置**：点击右上角"Skills"按钮
-- **发现技能**：
-  - 自动扫描预配置的 GitHub 仓库（Anthropic 官方、ComposioHQ、社区等）
-  - 添加自定义仓库（支持子目录扫描）
-- **安装技能**：点击"安装"一键安装到 `~/.claude/skills/`
-- **卸载技能**：点击"卸载"安全移除并清理状态
-- **管理仓库**：添加/删除自定义 GitHub 仓库
-
-### Prompts 管理（v3.7.0 新增）
-
-- **位置**：点击右上角"Prompts"按钮
-- **创建预设**：
-  - 创建无限数量的系统提示词预设
-  - 使用 Markdown 编辑器编写提示词（语法高亮 + 实时预览）
-- **切换预设**：选择预设 → 点击"激活"立即应用
-- **同步机制**：
-  - Claude: `~/.claude/CLAUDE.md`
-  - Codex: `~/.codex/AGENTS.md`
-  - Gemini: `~/.gemini/GEMINI.md`
-- **保护机制**：切换前自动保存当前提示词内容，保留手动修改
-
-### 配置文件
-
-**Claude Code**
-
-- Live 配置：`~/.claude/settings.json`（或 `claude.json`）
-- API key 字段：`env.ANTHROPIC_AUTH_TOKEN` 或 `env.ANTHROPIC_API_KEY`
-- MCP 服务器：`~/.claude.json` → `mcpServers`
-
-**Codex**
-
-- Live 配置：`~/.codex/auth.json`（必需）+ `config.toml`（可选）
-- API key 字段：`auth.json` 中的 `OPENAI_API_KEY`
-- MCP 服务器：`~/.codex/config.toml` → `[mcp_servers]` 表
-
-**Gemini**
-
-- Live 配置：`~/.gemini/.env`（API Key）+ `~/.gemini/settings.json`（保存认证模式）
-- API key 字段：`.env` 文件中的 `GEMINI_API_KEY` 或 `GOOGLE_GEMINI_API_KEY`
-- 环境变量：支持 `GOOGLE_GEMINI_BASE_URL`、`GEMINI_MODEL` 等自定义变量
-- MCP 服务器：`~/.gemini/settings.json` → `mcpServers`
-- 托盘快速切换：每次切换供应商都会重写 `~/.gemini/.env`，无需重启 Gemini CLI 即可生效
-
-**CC Switch 存储（v3.8.0 新架构）**
-
-- 数据库（SSOT）：`~/.cc-switch/cc-switch.db`（SQLite，存储供应商、MCP、Prompts、Skills）
-- 本地设置：`~/.cc-switch/settings.json`（设备级设置）
-- 备份：`~/.cc-switch/backups/`（自动轮换，保留 10 个）
-
-### 云同步设置
-
-1. 前往设置 → "自定义配置目录"
-2. 选择您的云同步文件夹（Dropbox、OneDrive、iCloud、坚果云等）
-3. 重启应用以应用
-4. 在其他设备上重复操作以启用跨设备同步
-
-> **注意**：首次启动会自动导入现有 Claude/Codex 配置作为默认供应商。
-
-## 架构总览
-
-### 设计原则
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    前端 (React + TS)                         │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐    │
-│  │ Components  │  │    Hooks     │  │  TanStack Query  │    │
-│  │   （UI）     │──│ （业务逻辑）   │──│   （缓存/同步）    │    │
-│  └─────────────┘  └──────────────┘  └──────────────────┘    │
-└────────────────────────┬────────────────────────────────────┘
-                         │ Tauri IPC
-┌────────────────────────▼────────────────────────────────────┐
-│                  后端 (Tauri + Rust)                         │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐    │
-│  │  Commands   │  │   Services   │  │  Models/Config   │    │
-│  │ （API 层）   │──│  （业务层）    │──│    （数据）       │    │
-│  └─────────────┘  └──────────────┘  └──────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**核心设计模式**
-
-- **SSOT**（单一事实源）：所有数据存储在 `~/.cc-switch/cc-switch.db`（SQLite）
-- **双层存储**：SQLite 存储可同步数据，JSON 存储设备级设置
-- **双向同步**：切换时写入 live 文件，编辑当前供应商时从 live 回填
-- **原子写入**：临时文件 + 重命名模式防止配置损坏
-- **并发安全**：Mutex 保护的数据库连接避免竞态条件
-- **分层架构**：清晰分离（Commands → Services → DAO → Database）
-
-**核心组件**
-
-- **ProviderService**：供应商增删改查、切换、回填、排序
-- **McpService**：MCP 服务器管理、导入导出、live 文件同步
-- **ConfigService**：配置导入导出、备份轮换
-- **SpeedtestService**：API 端点延迟测量
-
-**v3.6 重构**
-
-- 后端：5 阶段重构（错误处理 → 命令拆分 → 测试 → 服务 → 并发）
-- 前端：4 阶段重构（测试基础 → hooks → 组件 → 清理）
-- 测试：100% hooks 覆盖 + 集成测试（vitest + MSW）
-
-## 开发
+## 本地开发
 
 ### 环境要求
 
@@ -462,150 +31,107 @@ cargo build --release --manifest-path crates/server/Cargo.toml
 - Rust 1.85+
 - Tauri CLI 2.8+
 
-### 开发命令
+### 常用命令
 
 ```bash
 # 安装依赖
 pnpm install
 
-# 开发模式（热重载）
+# 桌面端开发
 pnpm dev
 
 # 类型检查
 pnpm typecheck
 
-# 代码格式化
-pnpm format
-
-# 检查代码格式
-pnpm format:check
-
-# 运行前端单元测试
+# 前端单元测试
 pnpm test:unit
 
-# 监听模式运行测试（推荐开发时使用）
-pnpm test:unit:watch
-
-# 构建应用
+# 构建桌面端
 pnpm build
-
-# 构建调试版本
-pnpm tauri build --debug
 ```
 
-### Rust 后端开发
+### Rust 后端
 
 ```bash
 cd src-tauri
 
-# 格式化 Rust 代码
 cargo fmt
-
-# 运行 clippy 检查
 cargo clippy
-
-# 运行后端测试
 cargo test
-
-# 运行特定测试
-cargo test test_name
-
-# 运行带测试 hooks 的测试
-cargo test --features test-hooks
 ```
 
-### 测试说明（v3.6 新增）
+## Web 模式
 
-**前端测试**：
-
-- 使用 **vitest** 作为测试框架
-- 使用 **MSW (Mock Service Worker)** 模拟 Tauri API 调用
-- 使用 **@testing-library/react** 进行组件测试
-
-**测试覆盖**：
-
-- Hooks 单元测试（100% 覆盖）
-  - `useProviderActions` - 供应商操作
-  - `useMcpActions` - MCP 管理
-  - `useSettings` 系列 - 设置管理
-  - `useImportExport` - 导入导出
-- 集成测试
-  - App 主应用流程
-  - SettingsDialog 完整交互
-  - MCP 面板功能
-
-**运行测试**：
+### 单端口启动
 
 ```bash
-# 运行所有测试
-pnpm test:unit
+./start-web.sh
+```
 
-# 监听模式（自动重跑）
-pnpm test:unit:watch
+启动后访问：
 
-# 带覆盖率报告
-pnpm test:unit --coverage
+```text
+http://localhost:17666
+```
+
+停止服务：
+
+```bash
+./stop-web.sh
+```
+
+运行时文件默认写入 `./.run/web/`：
+
+- 日志：`backend.log`
+- PID：`backend.pid`
+
+如需改到其他目录：
+
+```bash
+CC_SWITCH_RUNTIME_DIR=/tmp/cc-switch-web ./start-web.sh
+```
+
+### 手动调试
+
+```bash
+# 启动 Web 后端
+pnpm dev:server
+
+# 启动前端开发服务器（热重载）
+pnpm dev:web
+```
+
+说明：
+
+- `17666`：后端、Web UI、`/api`、`/api/ws`
+- `3000`：仅手动前端开发时使用的 Vite dev server
+
+### 手动构建 Web 版本
+
+```bash
+pnpm build:web
+cargo build --release --manifest-path crates/server/Cargo.toml
+./crates/server/target/release/cc-switch-web
 ```
 
 ## 技术栈
 
-**前端**：React 18 · TypeScript · Vite · TailwindCSS 4 · TanStack Query v5 · react-i18next · react-hook-form · zod · shadcn/ui · @dnd-kit
-
-**后端**：Tauri 2.8 · Rust · serde · tokio · thiserror · tauri-plugin-updater/process/dialog/store/log
-
-**测试**：vitest · MSW · @testing-library/react
+- 前端：React 18、TypeScript、Vite、TailwindCSS、TanStack Query
+- 后端：Tauri 2、Rust、tokio、serde
+- 测试：vitest、MSW、@testing-library/react
 
 ## 项目结构
 
-```
-├── src/                      # 前端 (React + TypeScript)
-│   ├── components/           # UI 组件 (providers/settings/mcp/ui)
-│   ├── hooks/                # 自定义 hooks (业务逻辑)
-│   ├── lib/
-│   │   ├── api/              # Tauri API 封装（类型安全）
-│   │   └── query/            # TanStack Query 配置
-│   ├── i18n/locales/         # 翻译 (zh/en)
-│   ├── config/               # 预设 (providers/mcp)
-│   └── types/                # TypeScript 类型定义
-├── src-tauri/                # 后端 (Rust)
-│   └── src/
-│       ├── commands/         # Tauri 命令层（按领域）
-│       ├── services/         # 业务逻辑层
-│       ├── app_config.rs     # 配置数据模型
-│       ├── provider.rs       # 供应商领域模型
-│       ├── mcp.rs            # MCP 同步与校验
-│       └── lib.rs            # 应用入口 & 托盘菜单
-├── tests/                    # 前端测试
-│   ├── hooks/                # 单元测试
-│   └── components/           # 集成测试
-└── assets/                   # 截图 & 合作商资源
+```text
+src/                 前端代码
+src-tauri/           Tauri 桌面端后端
+crates/server/       Web 服务端
+crates/core/         共用核心逻辑
+tests/               前端测试
+assets/              截图等资源
+docs/                补充文档
 ```
 
-## 更新日志
+## 许可证
 
-查看 [CHANGELOG.md](CHANGELOG.md) 了解版本更新详情。
-
-## Electron 旧版
-
-[Releases](../../releases) 里保留 v2.0.3 Electron 旧版
-
-如果需要旧版 Electron 代码，可以拉取 electron-legacy 分支
-
-## 贡献
-
-欢迎提交 Issue 反馈问题和建议！
-
-提交 PR 前请确保：
-
-- 通过类型检查：`pnpm typecheck`
-- 通过格式检查：`pnpm format:check`
-- 通过单元测试：`pnpm test:unit`
-- 💡 新功能开发前，欢迎先开 issue 讨论实现方案
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=farion1231/cc-switch&type=Date)](https://www.star-history.com/#farion1231/cc-switch&Date)
-
-## License
-
-MIT © Jason Young
+见 [LICENSE](LICENSE)。
