@@ -1,3 +1,4 @@
+#[cfg(feature = "desktop")]
 use serde_json::Value;
 use std::env;
 use std::path::PathBuf;
@@ -8,6 +9,7 @@ use tauri_plugin_store::StoreExt;
 use crate::error::AppError;
 
 /// Store 中的键名
+#[allow(dead_code)]
 const STORE_KEY_APP_CONFIG_DIR: &str = "app_config_dir_override";
 
 /// 缓存当前的 app_config_dir 覆盖路径，避免存储 AppHandle
@@ -67,6 +69,7 @@ fn read_override_from_store(app: &tauri::AppHandle) -> Option<PathBuf> {
 }
 
 #[cfg(not(feature = "desktop"))]
+#[allow(dead_code)]
 fn read_override_from_env() -> Option<PathBuf> {
     env::var("CC_SWITCH_CONFIG_DIR")
         .ok()
@@ -84,6 +87,7 @@ pub fn refresh_app_config_dir_override(app: &tauri::AppHandle) -> Option<PathBuf
 }
 
 #[cfg(not(feature = "desktop"))]
+#[allow(dead_code)]
 pub fn refresh_app_config_dir_override() -> Option<PathBuf> {
     let value = read_override_from_env();
     update_cached_override(value.clone());
@@ -127,6 +131,7 @@ pub fn set_app_config_dir_to_store(
 }
 
 #[cfg(not(feature = "desktop"))]
+#[allow(dead_code)]
 pub fn set_app_config_dir_to_store(path: Option<&str>) -> Result<(), AppError> {
     let value = path
         .map(str::trim)
@@ -137,6 +142,7 @@ pub fn set_app_config_dir_to_store(path: Option<&str>) -> Result<(), AppError> {
 }
 
 /// 解析路径，支持 ~ 开头的相对路径
+#[allow(dead_code)]
 fn resolve_path(raw: &str) -> PathBuf {
     if raw == "~" {
         if let Some(home) = dirs::home_dir() {
@@ -167,6 +173,7 @@ pub fn migrate_app_config_dir_from_settings(app: &tauri::AppHandle) -> Result<()
 }
 
 #[cfg(not(feature = "desktop"))]
+#[allow(dead_code)]
 pub fn migrate_app_config_dir_from_settings() -> Result<(), AppError> {
     let _ = refresh_app_config_dir_override();
     Ok(())

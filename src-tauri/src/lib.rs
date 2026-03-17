@@ -346,6 +346,7 @@ use tauri::RunEvent;
 #[cfg(feature = "desktop")]
 use tauri::{Emitter, Manager};
 
+#[cfg(feature = "desktop")]
 fn redact_url_for_log(url_str: &str) -> String {
     match url::Url::parse(url_str) {
         Ok(url) => {
@@ -1553,6 +1554,7 @@ pub async fn cleanup_before_exit(app_handle: &tauri::AppHandle) {
 ///
 /// 检查 `proxy_config.enabled` 字段，如果有任一应用的状态为 `true`，
 /// 则自动启动代理服务并接管对应应用的 Live 配置。
+#[cfg(feature = "desktop")]
 async fn restore_proxy_state_on_startup(state: &store::AppState) {
     // 收集需要恢复接管的应用列表（从 proxy_config.enabled 读取）
     let mut apps_to_restore = Vec::new();
@@ -1601,6 +1603,7 @@ async fn restore_proxy_state_on_startup(state: &store::AppState) {
 // ============================================================
 
 /// 检测是否为中文环境
+#[cfg(feature = "desktop")]
 fn is_chinese_locale() -> bool {
     std::env::var("LANG")
         .or_else(|_| std::env::var("LC_ALL"))

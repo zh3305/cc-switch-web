@@ -1,4 +1,5 @@
-//! Panic Hook 模块
+#![allow(dead_code)]
+
 //!
 //! 在应用崩溃时捕获 panic 信息并记录到 `<app_config_dir>/crash.log` 文件中（默认 `~/.cc-switch/crash.log`）。
 //! 便于用户和开发者诊断闪退问题。

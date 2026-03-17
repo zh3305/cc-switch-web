@@ -225,6 +225,7 @@ impl Database {
     }
 
     /// Periodic backup: create a new backup if the latest one is older than the configured interval
+    #[allow(dead_code)]
     pub(crate) fn periodic_backup_if_needed(&self) -> Result<(), AppError> {
         let interval_hours = crate::settings::effective_backup_interval_hours();
         if interval_hours > 0 {

@@ -2,6 +2,7 @@
 
 use crate::database::Database;
 use crate::error::AppError;
+#[cfg(feature = "desktop")]
 use crate::services::usage_stats::*;
 #[cfg(feature = "desktop")]
 use crate::store::AppState;

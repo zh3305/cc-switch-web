@@ -2,12 +2,10 @@
 
 use crate::app_config::AppType;
 use crate::init_status::{InitErrorPayload, SkillsMigrationPayload};
-use crate::services::ProviderService;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::Path;
-use std::str::FromStr;
 #[cfg(feature = "desktop")]
 use tauri::AppHandle;
 #[cfg(feature = "desktop")]
@@ -746,6 +744,7 @@ pub async fn open_provider_terminal(
 }
 
 /// 从提供商配置中提取环境变量
+#[allow(dead_code)]
 fn extract_env_vars_from_config(
     config: &serde_json::Value,
     app_type: &AppType,
@@ -797,6 +796,7 @@ fn extract_env_vars_from_config(
 
 /// 创建临时配置文件并启动 claude 终端
 /// 使用 --settings 参数传入提供商特定的 API 配置
+#[allow(dead_code)]
 fn launch_terminal_with_env(
     env_vars: Vec<(String, String)>,
     provider_id: &str,
@@ -834,6 +834,7 @@ fn launch_terminal_with_env(
 }
 
 /// 写入 claude 配置文件
+#[allow(dead_code)]
 fn write_claude_config(
     config_file: &std::path::Path,
     env_vars: &[(String, String)],
@@ -1011,6 +1012,7 @@ fn launch_macos_open_app(
 
 /// Linux: 根据用户首选终端启动
 #[cfg(target_os = "linux")]
+#[allow(dead_code)]
 fn launch_linux_terminal(config_file: &std::path::Path) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
     use std::process::Command;
@@ -1108,6 +1110,7 @@ exec bash --norc --noprofile
 
 /// Check if a command exists using `which`
 #[cfg(target_os = "linux")]
+#[allow(dead_code)]
 fn which_command(cmd: &str) -> bool {
     use std::process::Command;
     Command::new("which")

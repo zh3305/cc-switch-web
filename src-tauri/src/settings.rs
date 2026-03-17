@@ -473,6 +473,7 @@ pub fn get_settings() -> AppSettings {
         .clone()
 }
 
+#[allow(dead_code)]
 pub fn get_settings_for_frontend() -> AppSettings {
     let mut settings = get_settings();
     if let Some(sync) = &mut settings.webdav_sync {
@@ -648,6 +649,7 @@ pub fn get_skill_sync_method() -> SyncMethod {
 // ===== 备份策略管理函数 =====
 
 /// Get the effective auto-backup interval in hours (default 24)
+#[allow(dead_code)]
 pub fn effective_backup_interval_hours() -> u32 {
     settings_store()
         .read()
