@@ -29,3 +29,4 @@ flatpak-repo/
 .worktrees/
 .spec-workflow/
 .ace-tool/
+.run/web

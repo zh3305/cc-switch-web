@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { homeDir, join } from "@tauri-apps/api/path";
 import { settingsApi, type AppId } from "@/lib/api";
+import {
+  computeDefaultAppConfigDir,
+  computeDefaultConfigDir,
+} from "@/lib/platform-paths";
 import type { SettingsFormState } from "./useSettingsForm";
 
 type DirectoryKey = "appConfig" | "claude" | "codex" | "gemini" | "opencode";
@@ -19,42 +22,6 @@ const sanitizeDir = (value?: string | null): string | undefined => {
   if (!value) return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
-};
-
-const computeDefaultAppConfigDir = async (): Promise<string | undefined> => {
-  try {
-    const home = await homeDir();
-    return await join(home, ".cc-switch");
-  } catch (error) {
-    console.error(
-      "[useDirectorySettings] Failed to resolve default app config dir",
-      error,
-    );
-    return undefined;
-  }
-};
-
-const computeDefaultConfigDir = async (
-  app: AppId,
-): Promise<string | undefined> => {
-  try {
-    const home = await homeDir();
-    const folder =
-      app === "claude"
-        ? ".claude"
-        : app === "codex"
-          ? ".codex"
-          : app === "gemini"
-            ? ".gemini"
-            : ".config/opencode";
-    return await join(home, folder);
-  } catch (error) {
-    console.error(
-      "[useDirectorySettings] Failed to resolve default config dir",
-      error,
-    );
-    return undefined;
-  }
 };
 
 export interface UseDirectorySettingsProps {

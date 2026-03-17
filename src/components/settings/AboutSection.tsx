@@ -20,10 +20,9 @@ import {
 } from "@/components/ui/select";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { getVersion } from "@tauri-apps/api/app";
 import { settingsApi } from "@/lib/api";
 import { useUpdate } from "@/contexts/UpdateContext";
-import { relaunchApp } from "@/lib/updater";
+import { getCurrentVersion, relaunchApp } from "@/lib/updater";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import appIcon from "@/assets/icons/app-icon.png";
@@ -199,7 +198,7 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
     const load = async () => {
       try {
         const [appVersion] = await Promise.all([
-          getVersion(),
+          getCurrentVersion(),
           ...(isWindows() ? [] : [loadAllToolVersions()]),
         ]);
 
