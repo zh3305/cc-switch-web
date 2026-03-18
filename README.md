@@ -30,7 +30,6 @@ GitHub Releases publish the Web runtime only.
 | Platform | Asset | Run |
 | --- | --- | --- |
 | Windows x86_64 | `cc-switch-web-v{version}-windows-x86_64.exe` | `./cc-switch-web-v{version}-windows-x86_64.exe` |
-| macOS x86_64 | `cc-switch-web-v{version}-macos-x86_64` | `chmod +x ./cc-switch-web-v{version}-macos-x86_64 && ./cc-switch-web-v{version}-macos-x86_64` |
 | Linux x86_64 | `cc-switch-web-v{version}-linux-x86_64-ubuntu20.04` | `chmod +x ./cc-switch-web-v{version}-linux-x86_64-ubuntu20.04 && ./cc-switch-web-v{version}-linux-x86_64-ubuntu20.04` |
 
 ### Runtime defaults
@@ -43,12 +42,7 @@ GitHub Releases publish the Web runtime only.
 ### Platform notes
 
 - Windows: run the `.exe` directly in PowerShell or Command Prompt.
-- macOS: the binary is unsigned. If Gatekeeper blocks it, remove the quarantine attribute and run again.
 - Linux: official assets are built on Ubuntu 20.04 to keep the minimum supported baseline explicit.
-
-```bash
-xattr -d com.apple.quarantine ./cc-switch-web-v{version}-macos-x86_64
-```
 
 ## Local Development
 
@@ -123,6 +117,27 @@ cargo build --release --manifest-path crates/server/Cargo.toml
 ```
 
 This script emits `release-web/cc-switch-web-v{version}-linux-x86_64-ubuntu20.04`.
+
+### Release Workflow
+
+Stage the changes you want in the release commit first, then run the helper:
+
+```bash
+git add <your-files>
+pnpm release:cut -- 3.12.6 --push
+```
+
+The helper synchronizes these version files before commit and tag creation:
+
+- `package.json`
+- `src-tauri/Cargo.toml`
+- `src-tauri/tauri.conf.json`
+
+To update version fields only:
+
+```bash
+pnpm release:sync-version -- 3.12.6
+```
 
 ## Tech Stack
 

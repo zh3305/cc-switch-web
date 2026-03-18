@@ -30,7 +30,6 @@ GitHub Releases 仅发布 Web 运行版本。
 | 平台 | 资产名 | 运行方式 |
 | --- | --- | --- |
 | Windows x86_64 | `cc-switch-web-v{version}-windows-x86_64.exe` | `./cc-switch-web-v{version}-windows-x86_64.exe` |
-| macOS x86_64 | `cc-switch-web-v{version}-macos-x86_64` | `chmod +x ./cc-switch-web-v{version}-macos-x86_64 && ./cc-switch-web-v{version}-macos-x86_64` |
 | Linux x86_64 | `cc-switch-web-v{version}-linux-x86_64-ubuntu20.04` | `chmod +x ./cc-switch-web-v{version}-linux-x86_64-ubuntu20.04 && ./cc-switch-web-v{version}-linux-x86_64-ubuntu20.04` |
 
 ### 默认运行参数
@@ -43,12 +42,7 @@ GitHub Releases 仅发布 Web 运行版本。
 ### 平台说明
 
 - Windows：直接在 PowerShell 或命令提示符中运行 `.exe`。
-- macOS：二进制未签名，若被 Gatekeeper 阻止，需要先移除隔离属性。
 - Linux：正式资产在 Ubuntu 20.04 上构建，用来显式保证最低兼容基线。
-
-```bash
-xattr -d com.apple.quarantine ./cc-switch-web-v{version}-macos-x86_64
-```
 
 ## 本地开发
 
@@ -123,6 +117,27 @@ cargo build --release --manifest-path crates/server/Cargo.toml
 ```
 
 该脚本会产出 `release-web/cc-switch-web-v{version}-linux-x86_64-ubuntu20.04`。
+
+### 版本发布
+
+先把需要进入版本提交的代码加入暂存区，然后再执行发布脚本：
+
+```bash
+git add <your-files>
+pnpm release:cut -- 3.12.6 --push
+```
+
+脚本会统一更新以下版本文件，并基于当前暂存区创建提交和 tag：
+
+- `package.json`
+- `src-tauri/Cargo.toml`
+- `src-tauri/tauri.conf.json`
+
+如果只想同步版本号，不提交不打 tag：
+
+```bash
+pnpm release:sync-version -- 3.12.6
+```
 
 ## 技术栈
 

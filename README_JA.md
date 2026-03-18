@@ -30,7 +30,6 @@ GitHub Releases では Web ランタイムのみを公開します。
 | プラットフォーム | アセット名 | 実行方法 |
 | --- | --- | --- |
 | Windows x86_64 | `cc-switch-web-v{version}-windows-x86_64.exe` | `./cc-switch-web-v{version}-windows-x86_64.exe` |
-| macOS x86_64 | `cc-switch-web-v{version}-macos-x86_64` | `chmod +x ./cc-switch-web-v{version}-macos-x86_64 && ./cc-switch-web-v{version}-macos-x86_64` |
 | Linux x86_64 | `cc-switch-web-v{version}-linux-x86_64-ubuntu20.04` | `chmod +x ./cc-switch-web-v{version}-linux-x86_64-ubuntu20.04 && ./cc-switch-web-v{version}-linux-x86_64-ubuntu20.04` |
 
 ### 既定値
@@ -43,12 +42,7 @@ GitHub Releases では Web ランタイムのみを公開します。
 ### プラットフォーム注記
 
 - Windows: `.exe` をそのまま実行します。
-- macOS: 署名なしバイナリです。Gatekeeper に遮断された場合は隔離属性を削除してください。
 - Linux: 正式アセットは Ubuntu 20.04 上でビルドし、最低互換ラインを明示します。
-
-```bash
-xattr -d com.apple.quarantine ./cc-switch-web-v{version}-macos-x86_64
-```
 
 ## ローカル開発
 
@@ -123,6 +117,27 @@ cargo build --release --manifest-path crates/server/Cargo.toml
 ```
 
 このスクリプトは `release-web/cc-switch-web-v{version}-linux-x86_64-ubuntu20.04` を出力します。
+
+### リリース手順
+
+リリースに含める変更を先にステージしてから、ヘルパーを実行します。
+
+```bash
+git add <your-files>
+pnpm release:cut -- 3.12.6 --push
+```
+
+このヘルパーは次のバージョンファイルを同期し、その後にコミットと tag を作成します。
+
+- `package.json`
+- `src-tauri/Cargo.toml`
+- `src-tauri/tauri.conf.json`
+
+バージョン番号だけを更新する場合:
+
+```bash
+pnpm release:sync-version -- 3.12.6
+```
 
 ## 技術スタック
 
