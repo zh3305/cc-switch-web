@@ -14,7 +14,10 @@ interface EditProviderDialogProps {
   open: boolean;
   provider: Provider | null;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (provider: Provider) => Promise<void> | void;
+  onSubmit: (payload: {
+    provider: Provider;
+    originalId?: string;
+  }) => Promise<void> | void;
   appId: AppId;
   isProxyTakeover?: boolean; // 代理接管模式下不读取 live（避免显示被接管后的代理配置）
 }
@@ -28,6 +31,7 @@ export function EditProviderDialog({
   isProxyTakeover = false,
 }: EditProviderDialogProps) {
   const { t } = useTranslation();
+  const [isFormSubmitting, setIsFormSubmitting] = useState(false);
 
   // 默认使用传入的 provider.settingsConfig，若当前编辑对象是"当前生效供应商"，则尝试读取实时配置替换初始值
   const [liveSettings, setLiveSettings] = useState<Record<
@@ -150,7 +154,7 @@ export function EditProviderDialog({
   }, [
     open, // 修复：编辑保存后再次打开显示旧数据，依赖 open 确保每次打开时重新读取最新 provider 数据
     provider?.id, // 只依赖 ID，provider 对象更新不会触发重新计算
-    provider?.meta, // 需要依赖 meta 以便正确初始化 testConfig 和 proxyConfig
+    provider?.meta, // 需要依赖 meta 以便正确初始化 testConfig
     initialSettingsConfig,
   ]);
 
@@ -164,9 +168,15 @@ export function EditProviderDialog({
         string,
         unknown
       >;
+      const nextProviderId =
+        (appId === "opencode" || appId === "openclaw") &&
+        values.providerKey?.trim()
+          ? values.providerKey.trim()
+          : provider.id;
 
       const updatedProvider: Provider = {
         ...provider,
+        id: nextProviderId,
         name: values.name.trim(),
         notes: values.notes?.trim() || undefined,
         websiteUrl: values.websiteUrl?.trim() || undefined,
@@ -178,10 +188,13 @@ export function EditProviderDialog({
         ...(values.meta ? { meta: values.meta } : {}),
       };
 
-      await onSubmit(updatedProvider);
+      await onSubmit({
+        provider: updatedProvider,
+        originalId: provider.id,
+      });
       onOpenChange(false);
     },
-    [onSubmit, onOpenChange, provider],
+    [appId, onSubmit, onOpenChange, provider],
   );
 
   if (!provider || !initialData) {
@@ -197,6 +210,7 @@ export function EditProviderDialog({
         <Button
           type="submit"
           form="provider-form"
+          disabled={isFormSubmitting}
           className="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <Save className="h-4 w-4 mr-2" />
@@ -210,6 +224,7 @@ export function EditProviderDialog({
         submitLabel={t("common.save")}
         onSubmit={handleSubmit}
         onCancel={() => onOpenChange(false)}
+        onSubmittingChange={setIsFormSubmitting}
         initialData={initialData}
         showButtons={false}
       />

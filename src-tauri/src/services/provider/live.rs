@@ -33,6 +33,19 @@ pub(crate) fn sanitize_claude_settings_for_live(settings: &Value) -> Value {
     v
 }
 
+pub(crate) fn provider_exists_in_live_config(
+    app_type: &AppType,
+    provider_id: &str,
+) -> Result<bool, AppError> {
+    match app_type {
+        AppType::OpenCode => crate::opencode_config::get_providers()
+            .map(|providers| providers.contains_key(provider_id)),
+        AppType::OpenClaw => crate::openclaw_config::get_providers()
+            .map(|providers| providers.contains_key(provider_id)),
+        _ => Ok(false),
+    }
+}
+
 fn json_is_subset(target: &Value, source: &Value) -> bool {
     match source {
         Value::Object(source_map) => {
@@ -461,19 +474,18 @@ fn apply_common_config_to_settings(
     }
 }
 
-pub(crate) fn write_live_with_common_config(
+pub(crate) fn build_effective_settings_with_common_config(
     db: &Database,
     app_type: &AppType,
     provider: &Provider,
-) -> Result<(), AppError> {
+) -> Result<Value, AppError> {
     let snippet = db.get_config_snippet(app_type.as_str())?;
-    let mut effective_provider = provider.clone();
+    let mut effective_settings = provider.settings_config.clone();
 
     if provider_uses_common_config(app_type, provider, snippet.as_deref()) {
         if let Some(snippet_text) = snippet.as_deref() {
-            match apply_common_config_to_settings(app_type, &provider.settings_config, snippet_text)
-            {
-                Ok(settings) => effective_provider.settings_config = settings,
+            match apply_common_config_to_settings(app_type, &effective_settings, snippet_text) {
+                Ok(settings) => effective_settings = settings,
                 Err(err) => {
                     log::warn!(
                         "Failed to apply common config for {} provider '{}': {err}",
@@ -484,6 +496,18 @@ pub(crate) fn write_live_with_common_config(
             }
         }
     }
+
+    Ok(effective_settings)
+}
+
+pub(crate) fn write_live_with_common_config(
+    db: &Database,
+    app_type: &AppType,
+    provider: &Provider,
+) -> Result<(), AppError> {
+    let mut effective_provider = provider.clone();
+    effective_provider.settings_config =
+        build_effective_settings_with_common_config(db, app_type, provider)?;
 
     write_live_snapshot(app_type, &effective_provider)
 }
@@ -716,10 +740,10 @@ pub(crate) fn write_live_snapshot(app_type: &AppType, provider: &Provider) -> Re
                             provider.id
                         );
                     } else {
-                        log::error!(
-                            "OpenCode provider '{}' has invalid config structure, skipping write",
+                        return Err(AppError::Message(format!(
+                            "OpenCode provider '{}' has invalid config structure for live config (must contain 'npm' or 'options')",
                             provider.id
-                        );
+                        )));
                     }
                 }
             }
@@ -758,10 +782,10 @@ pub(crate) fn write_live_snapshot(app_type: &AppType, provider: &Provider) -> Re
                             provider.id
                         );
                     } else {
-                        log::error!(
-                            "OpenClaw provider '{}' has invalid config structure, skipping write",
+                        return Err(AppError::Message(format!(
+                            "OpenClaw provider '{}' has invalid config structure for live config (must contain 'baseUrl', 'api', or 'models')",
                             provider.id
-                        );
+                        )));
                     }
                 }
             }
@@ -776,23 +800,30 @@ pub(crate) fn write_live_snapshot(app_type: &AppType, provider: &Provider) -> Re
 /// Used for OpenCode and other additive mode applications.
 fn sync_all_providers_to_live(state: &AppState, app_type: &AppType) -> Result<(), AppError> {
     let providers = state.db.get_all_providers(app_type.as_str())?;
+    let mut synced_count = 0usize;
 
     for provider in providers.values() {
+        if provider
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.live_config_managed)
+            == Some(false)
+        {
+            continue;
+        }
+
         if let Err(e) = write_live_with_common_config(state.db.as_ref(), app_type, provider) {
             log::warn!(
                 "Failed to sync {:?} provider '{}' to live: {e}",
                 app_type,
                 provider.id
             );
-            // Continue syncing other providers, don't abort
+            continue;
         }
+        synced_count += 1;
     }
 
-    log::info!(
-        "Synced {} {:?} providers to live config",
-        providers.len(),
-        app_type
-    );
+    log::info!("Synced {synced_count} {app_type:?} providers to live config");
     Ok(())
 }
 
@@ -968,11 +999,12 @@ pub fn import_default_config(state: &AppState, app_type: AppType) -> Result<bool
         return Ok(false);
     }
 
-    {
-        let providers = state.db.get_all_providers(app_type.as_str())?;
-        if !providers.is_empty() {
-            return Ok(false); // 已有供应商，跳过
-        }
+    // 允许 "只有官方 seed 预设" 的情况下继续导入 live：
+    // - 启动编排顺序是先 import 后 seed，新用户启动时 providers 为空，导入照常
+    // - 老用户已有非 seed provider，跳过导入（正确）
+    // - 用户手动点 ProviderEmptyState 的导入按钮时，与官方 seed 共存而不被阻塞
+    if state.db.has_non_official_seed_provider(app_type.as_str())? {
+        return Ok(false);
     }
 
     let settings_config = match app_type {
@@ -1067,7 +1099,7 @@ pub(crate) fn write_gemini_live(provider: &Provider) -> Result<(), AppError> {
     // One-time auth type detection to avoid repeated detection
     let auth_type = detect_gemini_auth_type(provider);
 
-    let mut env_map = json_to_env(&provider.settings_config)?;
+    let env_map = json_to_env(&provider.settings_config)?;
 
     // Prepare config to write to ~/.gemini/settings.json
     // Behavior:
@@ -1111,17 +1143,12 @@ pub(crate) fn write_gemini_live(provider: &Provider) -> Result<(), AppError> {
 
     match auth_type {
         GeminiAuthType::GoogleOfficial => {
-            // Google official uses OAuth, clear env
-            env_map.clear();
+            // Google Official uses OAuth, no API key validation needed.
+            // Write user's env vars as-is (e.g. GEMINI_MODEL, custom vars).
             write_gemini_env_atomic(&env_map)?;
         }
-        GeminiAuthType::Packycode => {
-            // PackyCode provider, uses API Key (strict validation on switch)
-            validate_gemini_settings_strict(&provider.settings_config)?;
-            write_gemini_env_atomic(&env_map)?;
-        }
-        GeminiAuthType::Generic => {
-            // Generic provider, uses API Key (strict validation on switch)
+        GeminiAuthType::Packycode | GeminiAuthType::Generic => {
+            // API Key mode -- require GEMINI_API_KEY
             validate_gemini_settings_strict(&provider.settings_config)?;
             write_gemini_env_atomic(&env_map)?;
         }
@@ -1177,11 +1204,11 @@ pub fn import_opencode_providers_from_live(state: &AppState) -> Result<usize, Ap
     }
 
     let mut imported = 0;
-    let existing = state.db.get_all_providers("opencode")?;
+    let existing_ids = state.db.get_provider_ids("opencode")?;
 
     for (id, config) in providers {
         // Skip if already exists in database
-        if existing.contains_key(&id) {
+        if existing_ids.contains(&id) {
             log::debug!("OpenCode provider '{id}' already exists in database, skipping");
             continue;
         }
@@ -1196,12 +1223,16 @@ pub fn import_opencode_providers_from_live(state: &AppState) -> Result<usize, Ap
         };
 
         // Create provider
-        let provider = Provider::with_id(
+        let mut provider = Provider::with_id(
             id.clone(),
             config.name.clone().unwrap_or_else(|| id.clone()),
             settings_config,
             None,
         );
+        provider.meta = Some(crate::provider::ProviderMeta {
+            live_config_managed: Some(true),
+            ..Default::default()
+        });
 
         // Save to database
         if let Err(e) = state.db.save_provider("opencode", &provider) {
@@ -1230,7 +1261,7 @@ pub fn import_openclaw_providers_from_live(state: &AppState) -> Result<usize, Ap
     }
 
     let mut imported = 0;
-    let existing = state.db.get_all_providers("openclaw")?;
+    let existing_ids = state.db.get_provider_ids("openclaw")?;
 
     for (id, config) in providers {
         // Validate: skip entries with empty id or no models
@@ -1244,7 +1275,7 @@ pub fn import_openclaw_providers_from_live(state: &AppState) -> Result<usize, Ap
         }
 
         // Skip if already exists in database
-        if existing.contains_key(&id) {
+        if existing_ids.contains(&id) {
             log::debug!("OpenClaw provider '{id}' already exists in database, skipping");
             continue;
         }
@@ -1266,7 +1297,11 @@ pub fn import_openclaw_providers_from_live(state: &AppState) -> Result<usize, Ap
             .unwrap_or_else(|| id.clone());
 
         // Create provider
-        let provider = Provider::with_id(id.clone(), display_name, settings_config, None);
+        let mut provider = Provider::with_id(id.clone(), display_name, settings_config, None);
+        provider.meta = Some(crate::provider::ProviderMeta {
+            live_config_managed: Some(true),
+            ..Default::default()
+        });
 
         // Save to database
         if let Err(e) = state.db.save_provider("openclaw", &provider) {

@@ -6,12 +6,25 @@ export { mcpApi } from "./mcp";
 export { promptsApi } from "./prompts";
 export { skillsApi } from "./skills";
 export { usageApi } from "./usage";
+export { subscriptionApi } from "./subscription";
 export { vscodeApi } from "./vscode";
-export { authApi } from "./auth";
+export { combinedAuthApi as authApi } from "./auth";
 export { proxyApi } from "./proxy";
 export { openclawApi } from "./openclaw";
 export { sessionsApi } from "./sessions";
 export { workspaceApi } from "./workspace";
 export * as configApi from "./config";
+export * as copilotApi from "./copilot";
 export type { ProviderSwitchEvent } from "./providers";
 export type { Prompt } from "./prompts";
+export type {
+  CopilotDeviceCodeResponse,
+  CopilotAuthStatus,
+  GitHubAccount,
+} from "./copilot";
+export type {
+  ManagedAuthProvider,
+  ManagedAuthAccount,
+  ManagedAuthStatus,
+  ManagedAuthDeviceCodeResponse,
+} from "./auth";

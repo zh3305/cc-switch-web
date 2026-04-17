@@ -1,0 +1,11 @@
+## 前端文档
+`frontend/web-fork-architecture.md` - Web fork 与上游 cc-switch 的分层边界、同步策略与平台适配约束；修改 Web 适配实现或规划同步方案时必读
+
+## 当前任务文档
+`workflow/260417-merge-upstream-cc-switch.md` - 同步合并上游 cc-switch main 到当前 Web fork，记录阶段计划、冲突处理原则与验证项
+`workflow/260418-upstream-sync-strategy.md` - 面向长期频繁合并的 Web fork 同步策略、分阶段抽离路线与标准同步流程
+`workflow/260418-upstream-sync-execution-plan.md` - 长期频繁合并的实际执行计划，定义阶段目标、重点文件、实施顺序与暂不执行项
+
+## 全局重要记忆
+- 当前仓库是 `farion1231/cc-switch` 的 Web fork，正式发布以 Web 运行时为主，但仍保留 `src-tauri` 作为共享逻辑来源与上游同步抓手。
+- 平台差异优先收敛到 Web 适配层与发布层，避免在高频上游文件中散落大量 fork 定制。
