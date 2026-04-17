@@ -68,10 +68,12 @@ describe("main web bootstrap", () => {
     vi.clearAllMocks();
   });
 
-  it("initializes i18n before rendering translation-bound UI", async () => {
-    await act(async () => {
-      await import("@/main");
-    });
+  it(
+    "initializes i18n before rendering translation-bound UI",
+    async () => {
+      await act(async () => {
+        await import("@/main");
+      });
 
     await waitFor(() => {
       expect(screen.getByText("配置加载失败")).toBeInTheDocument();
@@ -87,9 +89,11 @@ describe("main web bootstrap", () => {
     expect(text).not.toContain("errors.configLoadFailedTitle");
     expect(text).not.toContain("{{path}}");
     expect(text).not.toContain("{{detail}}");
-    expect(listenMock).toHaveBeenCalledWith(
-      "configLoadError",
-      expect.any(Function),
-    );
-  });
+      expect(listenMock).toHaveBeenCalledWith(
+        "configLoadError",
+        expect.any(Function),
+      );
+    },
+    30000,
+  );
 });

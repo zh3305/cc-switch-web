@@ -72,9 +72,7 @@ export function useProxyStatus() {
         detail,
         defaultValue: `启动代理服务失败: ${detail}`,
       });
-      toast.error(
-        fillMessageTemplate(message, { detail }),
-      );
+      toast.error(fillMessageTemplate(message, { detail }));
     },
   });
 
@@ -104,9 +102,7 @@ export function useProxyStatus() {
         detail,
         defaultValue: `停止失败: ${detail}`,
       });
-      toast.error(
-        fillMessageTemplate(message, { detail }),
-      );
+      toast.error(fillMessageTemplate(message, { detail }));
     },
   });
 
@@ -148,9 +144,7 @@ export function useProxyStatus() {
         detail,
         defaultValue: `操作失败: ${detail}`,
       });
-      toast.error(
-        fillMessageTemplate(message, { detail }),
-      );
+      toast.error(fillMessageTemplate(message, { detail }));
     },
   });
 
@@ -174,9 +168,7 @@ export function useProxyStatus() {
         error: detail,
         defaultValue: `切换失败: ${detail}`,
       });
-      toast.error(
-        fillMessageTemplate(message, { error: detail }),
-      );
+      toast.error(fillMessageTemplate(message, { error: detail }));
     },
   });
 

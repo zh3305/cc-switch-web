@@ -6,6 +6,7 @@ import {
   deleteProvider,
   deleteSession,
   getCurrentProviderId,
+  getLiveProviderIds,
   getSessionMessages,
   getProviders,
   listProviders,
@@ -39,10 +40,32 @@ const withJson = async <T>(request: Request): Promise<T> => {
 const success = <T>(payload: T) => HttpResponse.json(payload as any);
 
 export const handlers = [
+  http.post("/api/invoke", async ({ request }) => {
+    const { command } = await withJson<{ command?: string }>(request);
+
+    if (command === "auth.status") {
+      return success({ result: { enabled: false } });
+    }
+
+    if (command === "auth.check") {
+      return success({ result: { valid: true } });
+    }
+
+    if (command === "auth.login") {
+      return success({ result: { success: true } });
+    }
+
+    return HttpResponse.json(
+      { error: `Unhandled auth invoke command: ${command ?? "unknown"}` },
+      { status: 400 },
+    );
+  }),
+
   http.post(`${TAURI_ENDPOINT}/get_migration_result`, () => success(false)),
   http.post(`${TAURI_ENDPOINT}/get_skills_migration_result`, () =>
     success(null),
   ),
+  http.post(`${TAURI_ENDPOINT}/get_installed_skills`, () => success([])),
   http.post(`${TAURI_ENDPOINT}/get_providers`, async ({ request }) => {
     const { app } = await withJson<{ app: AppId }>(request);
     return success(getProviders(app));
@@ -66,6 +89,20 @@ export const handlers = [
   ),
 
   http.post(`${TAURI_ENDPOINT}/update_tray_menu`, () => success(true)),
+
+  http.post(`${TAURI_ENDPOINT}/get_opencode_live_provider_ids`, () =>
+    success(getLiveProviderIds("opencode")),
+  ),
+
+  http.post(`${TAURI_ENDPOINT}/get_openclaw_live_provider_ids`, () =>
+    success(getLiveProviderIds("openclaw")),
+  ),
+
+  http.post(`${TAURI_ENDPOINT}/get_openclaw_default_model`, () =>
+    success({ primary: null, fallback: [] }),
+  ),
+
+  http.post(`${TAURI_ENDPOINT}/scan_openclaw_config_health`, () => success([])),
 
   http.post(`${TAURI_ENDPOINT}/switch_provider`, async ({ request }) => {
     const { id, app } = await withJson<{ id: string; app: AppId }>(request);
@@ -129,6 +166,29 @@ export const handlers = [
     return success(deleteSession(providerId, sessionId, sourcePath));
   }),
 
+  http.post(`${TAURI_ENDPOINT}/delete_sessions`, async ({ request }) => {
+    const { items = [] } = await withJson<{
+      items?: {
+        providerId: string;
+        sessionId: string;
+        sourcePath: string;
+      }[];
+    }>(request);
+
+    return success(
+      items.map((item) => ({
+        providerId: item.providerId,
+        sessionId: item.sessionId,
+        sourcePath: item.sourcePath,
+        success: deleteSession(
+          item.providerId,
+          item.sessionId,
+          item.sourcePath,
+        ),
+      })),
+    );
+  }),
+
   // MCP APIs
   http.post(`${TAURI_ENDPOINT}/get_mcp_config`, async ({ request }) => {
     const { app } = await withJson<{ app: AppId }>(request);
@@ -173,6 +233,8 @@ export const handlers = [
   http.post(`${TAURI_ENDPOINT}/restart_app`, () => success(true)),
 
   http.post(`${TAURI_ENDPOINT}/get_settings`, () => success(getSettings())),
+
+  http.post(`${TAURI_ENDPOINT}/check_env_conflicts`, () => success([])),
 
   http.post(`${TAURI_ENDPOINT}/save_settings`, async ({ request }) => {
     const { settings } = await withJson<{ settings: Settings }>(request);
