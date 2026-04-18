@@ -9,9 +9,12 @@ use crate::database::Database;
 use crate::error::AppError;
 use crate::ui_runtime::UiAppHandle;
 use std::collections::HashSet;
+#[cfg(not(feature = "desktop"))]
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+#[cfg(feature = "desktop")]
+use tauri::{Emitter, Manager};
 
 /// 故障转移切换管理器
 ///
@@ -95,11 +98,15 @@ impl FailoverSwitchManager {
         }
 
         log::info!("[FO-001] 切换: {app_type} → {provider_name}");
+        #[cfg(feature = "desktop")]
+        let mut switched = false;
+        #[cfg(not(feature = "desktop"))]
+        let switched: bool;
 
         #[cfg(feature = "desktop")]
         if let Some(app) = app_handle {
             if let Some(app_state) = app.try_state::<crate::store::AppState>() {
-                let switched = app_state
+                switched = app_state
                     .proxy_service
                     .hot_switch_provider(app_type, provider_id)
                     .await
