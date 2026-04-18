@@ -40,6 +40,7 @@ pub use app_config::{AppType, InstalledSkill, McpApps, McpServer, MultiAppConfig
 pub use codex_config::{
     get_codex_auth_path, get_codex_config_dir, get_codex_config_path, write_codex_live_atomic,
 };
+#[cfg(feature = "desktop")]
 pub use commands::open_provider_terminal;
 pub use commands::ModelPricingInfo;
 pub use commands::*;

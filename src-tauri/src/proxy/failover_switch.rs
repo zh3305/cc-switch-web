@@ -96,12 +96,10 @@ impl FailoverSwitchManager {
 
         log::info!("[FO-001] 切换: {app_type} → {provider_name}");
 
-        let mut switched = false;
-
         #[cfg(feature = "desktop")]
         if let Some(app) = app_handle {
             if let Some(app_state) = app.try_state::<crate::store::AppState>() {
-                switched = app_state
+                let switched = app_state
                     .proxy_service
                     .hot_switch_provider(app_type, provider_id)
                     .await

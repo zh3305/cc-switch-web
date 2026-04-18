@@ -16,8 +16,9 @@ use crate::ui_runtime::UiAppHandle;
 use serde_json::{json, Value};
 use std::str::FromStr;
 use std::sync::Arc;
-use tauri::Emitter;
 use tokio::sync::RwLock;
+#[cfg(feature = "desktop")]
+use tauri::Emitter;
 
 /// 用于接管 Live 配置时的占位符（避免客户端提示缺少 key，同时不泄露真实 Token）
 const PROXY_TOKEN_PLACEHOLDER: &str = "PROXY_MANAGED";
@@ -379,6 +380,7 @@ impl ProxyService {
             let _ = self.db.set_live_takeover_active(true).await;
 
             // 8) Warn if the current provider is official (risk of account ban via proxy)
+            #[cfg(feature = "desktop")]
             if let Ok(Some(current_id)) =
                 crate::settings::get_effective_current_provider(&self.db, &app)
             {

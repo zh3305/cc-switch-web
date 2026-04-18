@@ -1,6 +1,5 @@
 #[cfg(feature = "desktop")]
 use serde_json::Value;
-use std::env;
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
 #[cfg(feature = "desktop")]
@@ -71,7 +70,7 @@ fn read_override_from_store(app: &tauri::AppHandle) -> Option<PathBuf> {
 #[cfg(not(feature = "desktop"))]
 #[allow(dead_code)]
 fn read_override_from_env() -> Option<PathBuf> {
-    env::var("CC_SWITCH_CONFIG_DIR")
+    std::env::var("CC_SWITCH_CONFIG_DIR")
         .ok()
         .map(|v| v.trim().to_string())
         .filter(|v| !v.is_empty())

@@ -10,7 +10,7 @@ use super::{
     log_codes::fwd as log_fwd,
     provider_router::ProviderRouter,
     providers::{
-        gemini_shadow::GeminiShadowStore, get_adapter, AuthInfo, AuthStrategy, ProviderAdapter,
+        gemini_shadow::GeminiShadowStore, get_adapter, AuthStrategy, ProviderAdapter,
         ProviderType,
     },
     thinking_budget_rectifier::{rectify_thinking_budget, should_rectify_thinking_budget},
@@ -767,7 +767,7 @@ impl RequestForwarder {
         adapter: &dyn ProviderAdapter,
     ) -> Result<(ProxyResponse, Option<String>), ProxyError> {
         // 使用适配器提取 base_url
-        let mut base_url = adapter.extract_base_url(provider)?;
+        let base_url = adapter.extract_base_url(provider)?;
 
         let is_full_url = provider
             .meta
@@ -983,10 +983,10 @@ impl RequestForwarder {
             || should_force_identity_encoding(&effective_endpoint, &filtered_body, headers);
 
         // Codex OAuth 需要注入的 ChatGPT-Account-Id（在动态 token 获取期间填充）
-        let mut codex_oauth_account_id: Option<String> = None;
+        let codex_oauth_account_id: Option<String>;
 
         // 获取认证头（提前准备，用于内联替换）
-        let mut auth_headers = if let Some(mut auth) = adapter.extract_auth(provider) {
+        let mut auth_headers = if let Some(auth) = adapter.extract_auth(provider) {
             // GitHub Copilot 特殊处理：从 CopilotAuthManager 获取真实 token
             if auth.strategy == AuthStrategy::GitHubCopilot {
                 #[cfg(not(feature = "desktop"))]

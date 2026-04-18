@@ -2,7 +2,9 @@ use crate::deeplink::{
     import_mcp_from_deeplink, import_prompt_from_deeplink, import_provider_from_deeplink,
     import_skill_from_deeplink, parse_deeplink_url, DeepLinkImportRequest,
 };
+#[cfg(feature = "desktop")]
 use crate::store::AppState;
+#[cfg(feature = "desktop")]
 use tauri::State;
 
 /// Parse a deep link URL and return the parsed request for frontend confirmation
@@ -23,6 +25,7 @@ pub fn merge_deeplink_config(
 }
 
 /// Import a provider from a deep link request (legacy, kept for compatibility)
+#[cfg(feature = "desktop")]
 #[tauri::command]
 pub fn import_from_deeplink(
     state: State<AppState>,
@@ -42,6 +45,7 @@ pub fn import_from_deeplink(
 }
 
 /// Import resource from a deep link request (unified handler)
+#[cfg(feature = "desktop")]
 #[tauri::command]
 pub async fn import_from_deeplink_unified(
     state: State<'_, AppState>,
