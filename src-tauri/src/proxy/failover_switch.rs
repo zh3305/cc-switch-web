@@ -12,9 +12,9 @@ use std::collections::HashSet;
 #[cfg(not(feature = "desktop"))]
 use std::str::FromStr;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 #[cfg(feature = "desktop")]
 use tauri::{Emitter, Manager};
+use tokio::sync::RwLock;
 
 /// 故障转移切换管理器
 ///
