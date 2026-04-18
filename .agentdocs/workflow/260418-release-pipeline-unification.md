@@ -82,7 +82,12 @@
   - `~/.cargo/bin/cargo check --manifest-path crates/server/Cargo.toml`
   - `~/.cargo/bin/cargo test --manifest-path crates/core/Cargo.toml --lib`
   - `~/.cargo/bin/cargo test --manifest-path crates/server/Cargo.toml parse_skill_imports`
+  - `bash tests/test-web-deb-package.sh`
 - 新确认的环境事实：
   - 目前本地 `crates/server` 的失败点已不再是 Rust 接口错误，而是构建前必须先生成前端 `dist/`，否则 `RustEmbed` 会因为目录不存在而失败。
   - `reqwest` 切到 `rustls` 后，本机已能完成 `crates/core` 与 `crates/server` 的 `cargo check`，不再受这条 OpenSSL 依赖链阻塞。
 - 下一步应先整理并提交当前修复，再在该提交上创建新的 Web release tag；由于 `v3.13.3` 已失败，后续必须使用新的 tag，而不是复用旧 tag。
+- 本地已验证 `build-web-release.sh` 能真实产出以下 Linux 资产：
+  - 独立二进制：`release-web-test/cc-switch-web-v3.13.3-linux-x86_64-ubuntu20.04`
+  - Debian 安装包：`release-web-test/cc-switch-web_3.13.3_amd64.deb`
+  - `.deb` 内已包含 `systemd` service、默认环境文件与安装后的主程序路径。

@@ -121,6 +121,11 @@ fn is_loopback_host(host: &str) -> bool {
 
 #[tokio::main]
 async fn main() {
+    if let Err(err) = cc_switch_core::ensure_rustls_crypto_provider() {
+        eprintln!("❌ Failed to initialize Rustls crypto provider: {err}");
+        std::process::exit(1);
+    }
+
     // Initialize tracing
     tracing_subscriber::registry()
         .with(

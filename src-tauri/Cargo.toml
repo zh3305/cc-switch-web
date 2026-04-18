@@ -1,6 +1,6 @@
 [package]
 name = "cc-switch"
-version = "3.13.3"
+version = "3.13.5"
 description = "All-in-One Assistant for Claude Code, Codex & Gemini CLI"
 authors = ["Jason Young"]
 license = "MIT"
@@ -51,7 +51,7 @@ tauri-plugin-deep-link = { version = "2", optional = true }
 dirs = "5.0"
 toml = "0.8"
 toml_edit = "0.22"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream", "socks", "charset", "http2", "gzip", "brotli", "deflate"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream", "socks"] }
 arboard = "3.6"
 flate2 = "1"
 brotli = "7"

@@ -312,6 +312,31 @@ pub const WEB_COMPAT_TAURI_COMMANDS: &[&str] = &[
     "save_stream_check_config",
 ];
 
+/// 确保当前进程为 rustls 安装默认的 CryptoProvider。
+///
+/// Web/headless 运行时的依赖树会同时带入 `ring` 与 `aws-lc-rs`，
+/// rustls 无法再依赖特征自动推断 provider，因此需要在应用启动早期显式安装。
+pub fn ensure_rustls_crypto_provider() -> Result<(), String> {
+    if rustls::crypto::CryptoProvider::get_default().is_some() {
+        return Ok(());
+    }
+
+    if rustls::crypto::ring::default_provider()
+        .install_default()
+        .is_ok()
+        || rustls::crypto::CryptoProvider::get_default().is_some()
+    {
+        return Ok(());
+    }
+
+    Err("初始化 Rustls CryptoProvider 失败".to_string())
+}
+
+/// 返回当前进程是否已经安装默认的 rustls CryptoProvider。
+pub fn is_rustls_crypto_provider_initialized() -> bool {
+    rustls::crypto::CryptoProvider::get_default().is_some()
+}
+
 // Re-export claude_plugin functions for web server use
 pub use claude_plugin::{
     claude_config_status, clear_claude_config, is_claude_config_applied, read_claude_config,
@@ -492,6 +517,10 @@ fn macos_tray_icon() -> Option<Image<'static>> {
 #[cfg(feature = "desktop")]
 #[cfg_attr(all(feature = "desktop", mobile), tauri::mobile_entry_point)]
 pub fn run() {
+    if let Err(err) = ensure_rustls_crypto_provider() {
+        panic!("failed to initialize rustls crypto provider: {err}");
+    }
+
     // 设置 panic hook，在应用崩溃时记录日志到 <app_config_dir>/crash.log（默认 ~/.cc-switch/crash.log）
     panic_hook::setup_panic_hook();
 

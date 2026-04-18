@@ -38,6 +38,16 @@ pub struct CoreContext {
     skill_service: Option<Arc<SkillService>>,
 }
 
+/// 为当前进程安装默认的 Rustls CryptoProvider。
+pub fn ensure_rustls_crypto_provider() -> Result<(), String> {
+    cc_switch::ensure_rustls_crypto_provider()
+}
+
+/// 返回当前进程是否已经安装默认的 Rustls CryptoProvider。
+pub fn is_rustls_crypto_provider_initialized() -> bool {
+    cc_switch::is_rustls_crypto_provider_initialized()
+}
+
 impl CoreContext {
     /// 初始化核心上下文
     ///

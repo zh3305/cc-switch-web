@@ -1,0 +1,21 @@
+[Unit]
+Description=CC-Switch Web Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cc-switch-web
+Group=cc-switch-web
+Environment=HOME=/var/lib/cc-switch-web
+Environment=XDG_CONFIG_HOME=/var/lib/cc-switch-web/.config
+Environment=XDG_DATA_HOME=/var/lib/cc-switch-web/.local/share
+EnvironmentFile=-/etc/default/cc-switch-web
+WorkingDirectory=/var/lib/cc-switch-web
+ExecStart=/usr/lib/cc-switch-web/cc-switch-web
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

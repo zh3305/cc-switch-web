@@ -151,8 +151,10 @@ jobs:
           fi
 
           ASSET_NAME="cc-switch-web-v${VERSION}-linux-x86_64-ubuntu20.04"
+          DEB_ASSET_NAME="cc-switch-web_${VERSION}_amd64.deb"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "ASSET_NAME=$ASSET_NAME" >> "$GITHUB_ENV"
+          echo "DEB_ASSET_NAME=$DEB_ASSET_NAME" >> "$GITHUB_ENV"
 
       - name: Install frontend dependencies
         shell: bash
@@ -172,13 +174,23 @@ jobs:
         shell: bash
         run: cargo build --release --manifest-path crates/server/Cargo.toml
 
-      - name: Create release asset
+      - name: Create standalone release asset
         shell: bash
         run: |
           mkdir -p release-assets
           cp crates/server/target/release/cc-switch-web "release-assets/${ASSET_NAME}"
           chmod +x "release-assets/${ASSET_NAME}"
           ls -lah release-assets/
+
+      - name: Build Debian package
+        shell: bash
+        run: |
+          bash scripts/build-web-deb-package.sh \
+            "${VERSION}" \
+            "crates/server/target/release/cc-switch-web" \
+            "release-assets"
+          test -f "release-assets/${DEB_ASSET_NAME}"
+          ls -lah "release-assets/${DEB_ASSET_NAME}"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -217,10 +229,15 @@ jobs:
             printf '%s\n\n' 'Official GitHub Releases now publish the Web runtime only.'
             printf '%s\n' '### Assets'
             printf -- '- Windows x86_64: `cc-switch-web-v%s-windows-x86_64.exe`\n' "$VERSION"
-            printf -- '- Linux x86_64 baseline: `cc-switch-web-v%s-linux-x86_64-ubuntu20.04` (built in an Ubuntu 20.04 container on an ubuntu-22.04 runner)\n\n' "$VERSION"
+            printf -- '- Linux x86_64 standalone: `cc-switch-web-v%s-linux-x86_64-ubuntu20.04` (built in an Ubuntu 20.04 container on an ubuntu-22.04 runner)\n' "$VERSION"
+            printf -- '- Linux x86_64 Debian package: `cc-switch-web_%s_amd64.deb`\n\n' "$VERSION"
             printf '%s\n' '### Quick start'
             printf -- '- Windows: run `cc-switch-web-v%s-windows-x86_64.exe`\n' "$VERSION"
-            printf -- '- Linux: `chmod +x ./cc-switch-web-v%s-linux-x86_64-ubuntu20.04 && ./cc-switch-web-v%s-linux-x86_64-ubuntu20.04`\n\n' "$VERSION" "$VERSION"
+            printf -- '- Linux standalone: `chmod +x ./cc-switch-web-v%s-linux-x86_64-ubuntu20.04 && ./cc-switch-web-v%s-linux-x86_64-ubuntu20.04`\n' "$VERSION" "$VERSION"
+            printf -- '- Linux Debian package: `sudo dpkg -i ./cc-switch-web_%s_amd64.deb`\n\n' "$VERSION"
+            printf '%s\n' '### Linux systemd service'
+            printf '%s\n' '- Debian package installs `cc-switch-web.service` and enables it automatically.'
+            printf '%s\n\n' '- Override defaults in `/etc/default/cc-switch-web`, then run `sudo systemctl restart cc-switch-web`.'
             printf '%s\n' '### Runtime configuration'
             printf '%s\n' '- Default address: `http://127.0.0.1:17666`'
             printf '%s\n' '- Override port: `CC_SWITCH_PORT=8080`'

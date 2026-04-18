@@ -21,6 +21,8 @@ SOURCE_BINARY_PATH="$PROJECT_ROOT/crates/server/target/release/$SOURCE_BINARY_NA
 RELEASE_VERSION=""
 RELEASE_ASSET_NAME=""
 RELEASE_ASSET_PATH=""
+DEB_PACKAGE_NAME=""
+DEB_PACKAGE_PATH=""
 
 export CARGO_INCREMENTAL=1
 export CARGO_TARGET_DIR="$PROJECT_ROOT/crates/server/target"
@@ -69,6 +71,8 @@ resolve_package_manager
 RELEASE_VERSION="${RELEASE_VERSION:-$(node -p "require('./package.json').version")}"
 RELEASE_ASSET_NAME="cc-switch-web-v${RELEASE_VERSION}-linux-x86_64-ubuntu20.04"
 RELEASE_ASSET_PATH="$OUTPUT_DIR/$RELEASE_ASSET_NAME"
+DEB_PACKAGE_NAME="cc-switch-web_${RELEASE_VERSION}_amd64.deb"
+DEB_PACKAGE_PATH="$OUTPUT_DIR/$DEB_PACKAGE_NAME"
 
 if [[ ! -d "$PROJECT_ROOT/node_modules" ]]; then
     echo "❌ Error: node_modules not found."
@@ -106,8 +110,10 @@ fi
 
 cp "$SOURCE_BINARY_PATH" "$RELEASE_ASSET_PATH"
 chmod +x "$RELEASE_ASSET_PATH"
+"$PROJECT_ROOT/scripts/build-web-deb-package.sh" "$RELEASE_VERSION" "$SOURCE_BINARY_PATH" "$OUTPUT_DIR"
 
 BINARY_SIZE="$(du -h "$RELEASE_ASSET_PATH" | cut -f1)"
+DEB_SIZE="$(du -h "$DEB_PACKAGE_PATH" | cut -f1)"
 
 echo ""
 echo "╔════════════════════════════════════════════════════╗"
@@ -115,6 +121,8 @@ echo "║                 Build Complete                    ║"
 echo "╠════════════════════════════════════════════════════╣"
 printf "║  Output: %-40s ║\n" "$RELEASE_ASSET_PATH"
 printf "║  Size:   %-40s ║\n" "$BINARY_SIZE"
+printf "║  Deb:    %-40s ║\n" "$DEB_PACKAGE_PATH"
+printf "║  DebSize:%-40s ║\n" "$DEB_SIZE"
 echo "╠════════════════════════════════════════════════════╣"
 echo "║  Run:                                              ║"
 printf "║    %s%-43s ║\n" "" "$RELEASE_ASSET_PATH"

@@ -10,3 +10,5 @@
 ## 全局重要记忆
 - 当前仓库是 `farion1231/cc-switch` 的 Web fork，正式发布以 Web 运行时为主，但仍保留 `src-tauri` 作为共享逻辑来源与上游同步抓手。
 - 平台差异优先收敛到 Web 适配层与发布层，避免在高频上游文件中散落大量 fork 定制。
+- Web/headless 运行时必须在进程启动早期显式初始化 rustls `CryptoProvider`；上游依赖树可能同时启用 `ring` 与 `aws-lc-rs`，若丢失该初始化会在首次 HTTPS/TLS 请求时 panic。
+- `src-tauri/Cargo.toml` 中 `reqwest` 需保留 `default-features = false` 这个最小分叉，避免 Web/headless 构建重新引入 `native-tls/openssl` 和 `pkg-config` 系统依赖；其余特性尽量跟上游保持一致。

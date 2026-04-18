@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -e
+
+SERVICE_NAME="cc-switch-web.service"
+
+if ! command -v systemctl >/dev/null 2>&1; then
+    exit 0
+fi
+
+case "$1" in
+remove|deconfigure)
+    systemctl --no-reload disable --now "$SERVICE_NAME" >/dev/null 2>&1 || true
+    ;;
+upgrade)
+    systemctl stop "$SERVICE_NAME" >/dev/null 2>&1 || true
+    ;;
+esac
+
+exit 0
