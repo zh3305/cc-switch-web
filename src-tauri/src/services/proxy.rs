@@ -16,9 +16,9 @@ use crate::ui_runtime::UiAppHandle;
 use serde_json::{json, Value};
 use std::str::FromStr;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 #[cfg(feature = "desktop")]
 use tauri::Emitter;
+use tokio::sync::RwLock;
 
 /// 用于接管 Live 配置时的占位符（避免客户端提示缺少 key，同时不泄露真实 Token）
 const PROXY_TOKEN_PLACEHOLDER: &str = "PROXY_MANAGED";
