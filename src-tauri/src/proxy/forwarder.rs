@@ -767,7 +767,7 @@ impl RequestForwarder {
         adapter: &dyn ProviderAdapter,
     ) -> Result<(ProxyResponse, Option<String>), ProxyError> {
         // 使用适配器提取 base_url
-        let base_url = adapter.extract_base_url(provider)?;
+        let mut base_url = adapter.extract_base_url(provider)?;
 
         let is_full_url = provider
             .meta
@@ -983,10 +983,10 @@ impl RequestForwarder {
             || should_force_identity_encoding(&effective_endpoint, &filtered_body, headers);
 
         // Codex OAuth 需要注入的 ChatGPT-Account-Id（在动态 token 获取期间填充）
-        let codex_oauth_account_id: Option<String>;
+        let mut codex_oauth_account_id: Option<String> = None;
 
         // 获取认证头（提前准备，用于内联替换）
-        let mut auth_headers = if let Some(auth) = adapter.extract_auth(provider) {
+        let mut auth_headers = if let Some(mut auth) = adapter.extract_auth(provider) {
             // GitHub Copilot 特殊处理：从 CopilotAuthManager 获取真实 token
             if auth.strategy == AuthStrategy::GitHubCopilot {
                 #[cfg(not(feature = "desktop"))]
