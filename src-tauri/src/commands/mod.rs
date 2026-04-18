@@ -93,9 +93,9 @@ pub use skill::*;
 #[cfg(feature = "desktop")]
 pub use stream_check::*;
 #[cfg(feature = "desktop")]
-pub use sync_support::*;
-#[cfg(feature = "desktop")]
 pub use subscription::*;
+#[cfg(feature = "desktop")]
+pub use sync_support::*;
 
 #[cfg(feature = "desktop")]
 pub use lightweight::*;

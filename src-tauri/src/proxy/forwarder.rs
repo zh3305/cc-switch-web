@@ -20,13 +20,13 @@ use super::{
     types::{CopilotOptimizerConfig, OptimizerConfig, ProxyStatus, RectifierConfig},
     ProxyError,
 };
-use crate::ui_runtime::UiAppHandle;
 #[cfg(feature = "desktop")]
 use crate::commands::{CodexOAuthState, CopilotAuthState};
 #[cfg(feature = "desktop")]
 use crate::proxy::providers::codex_oauth_auth::CodexOAuthManager;
 #[cfg(feature = "desktop")]
 use crate::proxy::providers::copilot_auth::CopilotAuthManager;
+use crate::ui_runtime::UiAppHandle;
 use crate::{app_config::AppType, provider::Provider};
 use http::Extensions;
 use serde_json::Value;
@@ -1487,7 +1487,8 @@ impl RequestForwarder {
         }
 
         #[cfg(feature = "desktop")]
-        let Some(app_handle) = &self.app_handle else {
+        let Some(app_handle) = &self.app_handle
+        else {
             log::debug!("[Copilot] AppHandle unavailable, fallback to chat/completions");
             return false;
         };
