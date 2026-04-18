@@ -129,6 +129,14 @@
 如环境允许，建议继续补：
 
 - `cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --features headless`
+- `cargo fmt --check --manifest-path src-tauri/Cargo.toml`
+- `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
+
+### 本地环境约束
+
+- 当前仓库已验证：仅安装 Rust 工具链还不够，`src-tauri` 的完整后端检查还依赖 `pkg-config`、`libssl-dev`、`libgtk-3-dev`、`librsvg2-dev`、`libayatana-appindicator3-dev`、`libwebkit2gtk`、`libsoup` 等系统库。
+- 若在 WSL 中执行本地验证，建议先确认当前账号具备 `sudo` 权限；否则只能完成前端检查、Rust 格式检查和部分无系统库依赖的步骤。
+- 若本地访问 `crates.io` 不稳定，优先为 `cargo` 配置 sparse 镜像，避免把网络抖动误判为代码问题。
 
 ## 不推荐的方案
 

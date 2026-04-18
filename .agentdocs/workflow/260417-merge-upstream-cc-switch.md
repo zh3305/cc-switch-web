@@ -45,16 +45,18 @@
 
 - 已在分支 `codex/merge-upstream-20260417` 上完成一次真实的上游 `main` 合并。
 - 已解决合并冲突，并保留 Web fork 的文档、Web 发布脚本与 headless/Web 适配方向。
+- 合并后的 `main` 已修复 Rust `fmt`、`clippy` 与测试编译问题，GitHub `CI` 已重新通过。
 - 前端格式检查已通过：`npx prettier --check "src/**/*.{js,jsx,ts,tsx,css,json}"`。
 - TypeScript 类型检查已通过：`corepack pnpm typecheck`。
 - 前端单元与集成测试已通过：`corepack pnpm test:unit`，共 `34` 个测试文件、`210` 个测试用例通过。
 - 已补齐 merge 后新增认证、窗口 API 与技能查询对应的测试支撑，入口/集成测试已按真实初始化成本调整为更稳定的用例级超时。
-- 当前环境仍缺少 Rust 工具链，尚未执行 Rust 侧验证。
+- 当前 WSL 已补齐 `rustup`、`cargo`、`rustfmt`、`clippy` 与 `rsproxy` 配置，可执行基础 Rust 本地检查。
+- 当前 WSL 账号仍缺少 `sudo` 权限，无法安装 `pkg-config`、`libssl-dev`、`libgtk-3-dev` 等系统库，因此桌面依赖相关的全量 Rust 构建仍需依赖 CI 环境完成。
 
 ## 后续待补验
 
-- 补跑 `cargo test -p cc-switch-server tauri_rpc_consistency --manifest-path crates/server/Cargo.toml`
-- 如需发布桌面端或继续增强上游新能力，需要进一步核对 `src-tauri/src/proxy/forwarder.rs`、`src-tauri/src/services/proxy.rs` 等 headless/desktop 双模式兼容性
+- 如需在本地完整复现 CI 的后端检查，需要为当前 WSL 账号补齐系统依赖安装能力，或切换到已具备桌面构建依赖的 Linux 环境。
+- 如需发布桌面端或继续增强上游新能力，需要进一步核对 `src-tauri/src/proxy/forwarder.rs`、`src-tauri/src/services/proxy.rs` 等 headless/desktop 双模式兼容性。
 
 ## 冲突处理原则
 
