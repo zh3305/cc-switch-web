@@ -8,6 +8,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+#[cfg(feature = "desktop")]
 use std::str::FromStr;
 #[cfg(feature = "desktop")]
 use tauri::AppHandle;
@@ -39,7 +40,7 @@ pub async fn open_external(app: AppHandle, url: String) -> Result<bool, String> 
     Ok(true)
 }
 
-#[tauri::command]
+#[cfg_attr(feature = "desktop", tauri::command)]
 pub async fn copy_text_to_clipboard(text: String) -> Result<bool, String> {
     // Use spawn_blocking to avoid blocking the async runtime
     // Clipboard access can block on some platforms and may have thread/loop constraints

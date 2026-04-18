@@ -44,7 +44,7 @@
 ### 阶段 3：完成正式发版
 
 - [ ] 提交并推送 `main`
-- [ ] 在当前 `main` 提交上创建新 tag
+- [ ] 在当前 `main` 提交上创建新 tag（已知 `v3.13.2` 失败，下一次使用 `v3.13.3`）
 - [ ] 观察 GitHub Actions，确认 `Build Web Release` 触发并生成 Release 资产
 
 ## 决策记录
@@ -56,9 +56,18 @@
 ## 当前执行结果
 
 - 已修复 `main` 上导致 GitHub `CI` 失败的前端与 Rust 格式问题。
+- 已定位 `Build Web Release` 首次失败根因为 `src-tauri` 在 `headless` 构建路径下仍残留裸 `#[tauri::command]` 与 `tauri::async_runtime` 调用。
+- 已在以下文件完成最小隔离修复，避免 `crates/server` 构建时误要求桌面 `tauri` 依赖：
+  - `src-tauri/src/commands/deeplink.rs`
+  - `src-tauri/src/commands/misc.rs`
+  - `src-tauri/src/commands/model_fetch.rs`
+  - `src-tauri/src/commands/session_manager.rs`
 - 已通过本地验证：
   - `corepack pnpm format:check`
   - `corepack pnpm typecheck`
   - `corepack pnpm test:unit`
+- 已通过本地验证：
+  - `~/.cargo/bin/cargo fmt --check --manifest-path src-tauri/Cargo.toml`
 - 单元与集成测试结果为 `34` 个测试文件、`210` 个测试全部通过。
-- 下一步为提交当前修复、推送 `main`，并在当前主线提交上创建新的 Web release tag。
+- 本地 `cargo check --manifest-path crates/core/Cargo.toml` / `crates/server/Cargo.toml` 仍受当前 WSL 缺少 `pkg-config` 与 OpenSSL 开发环境限制，无法在本机完成到底；后续以 GitHub Actions 的完整构建环境为准。
+- 下一步为提交当前修复、推送 `main`，并在当前主线提交上创建新的 Web release tag `v3.13.3`。

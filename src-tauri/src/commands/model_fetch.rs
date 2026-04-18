@@ -8,7 +8,7 @@ use crate::services::model_fetch::{self, FetchedModel};
 ///
 /// 使用 OpenAI 兼容的 GET /v1/models 端点。
 /// 主要面向第三方聚合站（硅基流动、OpenRouter 等）。
-#[tauri::command(rename_all = "camelCase")]
+#[cfg_attr(feature = "desktop", tauri::command(rename_all = "camelCase"))]
 pub async fn fetch_models_for_config(
     base_url: String,
     api_key: String,
