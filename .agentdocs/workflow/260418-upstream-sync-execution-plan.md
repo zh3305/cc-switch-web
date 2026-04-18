@@ -7,7 +7,8 @@
 ## 约束
 
 - 当前仓库已经有一次大规模 upstream merge 正在整理中，短期内不应再叠加大重构。
-- 当前环境缺少 `cargo` / `rustc` / 本地 `tsc`，因此本计划优先服务于后续可执行实施，而不是本轮直接落地全部代码。
+- 当前环境已补齐 `rustup` / `cargo` / `rustfmt` / `clippy` 与前端检查能力，但当前 WSL 账号仍缺少 `sudo` 权限，无法安装完整桌面构建所需系统库。
+- 因此，本计划可以落地前端检查、Rust 格式检查与部分 headless 验证，但完整桌面相关后端校验仍需依赖具备系统依赖的 CI 或 Linux 环境。
 - 任何改动都必须优先降低未来 merge 冲突面，而不是追求抽象上“最优”的结构。
 
 ## 阶段概览
@@ -139,6 +140,24 @@
 - 审查并继续收敛前端平台适配边界
 - 清点 `crates/core` 中最值得优先下沉的纯逻辑入口
 - 只启动第一个“小模块抽离”任务
+
+## 标准同步清单
+
+每次从上游 `cc-switch` 合并时，按以下顺序执行：
+
+1. `git switch main && git pull --ff-only`
+2. `git switch -c codex/merge-upstream-YYYYMMDD`
+3. `git fetch upstream main --tags`
+4. `git merge --no-ff upstream/main`
+5. 优先解决发布层、Web 适配层、`headless/desktop` 双模式相关冲突
+6. 运行前端验证：
+   `corepack pnpm typecheck`
+   `corepack pnpm test:unit`
+7. 运行 Rust 可执行验证：
+   `cargo fmt --check --manifest-path src-tauri/Cargo.toml`
+   如环境允许，再运行 `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
+8. 若本地缺系统库或桌面依赖，必须等待 GitHub `CI` 通过后再继续发布动作
+9. 更新 `.agentdocs` 中的任务文档，记录本次冲突热点与新增环境约束
 
 ## 暂时不要做的事
 
