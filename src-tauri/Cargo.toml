@@ -51,7 +51,7 @@ tauri-plugin-deep-link = { version = "2", optional = true }
 dirs = "5.0"
 toml = "0.8"
 toml_edit = "0.22"
-reqwest = { version = "0.12", features = ["rustls-tls", "json", "stream", "socks"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream", "socks", "charset", "http2", "gzip", "brotli", "deflate"] }
 arboard = "3.6"
 flate2 = "1"
 brotli = "7"

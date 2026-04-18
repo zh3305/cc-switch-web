@@ -10,8 +10,8 @@ use std::{collections::HashMap, path::Path};
 
 use cc_switch::{
     default_sql_export_file_name, export_database_sql, export_database_to_file,
-    import_database_with_sync, AppError, AppSettings, AppState, AppType, Database,
-    EndpointLatency, McpServer, Provider, ProviderService, SkillService, SpeedtestService,
+    import_database_with_sync, AppError, AppSettings, AppState, AppType, Database, EndpointLatency,
+    ImportSkillSelection, McpServer, Provider, ProviderService, SkillService, SpeedtestService,
 };
 use chrono::Utc;
 use indexmap::IndexMap;
@@ -19,13 +19,14 @@ use indexmap::IndexMap;
 /// 对外暴露的核心类型别名，便于直接使用
 pub use cc_switch::{
     AppSettings as CoreAppSettings, AppType as CoreAppType, BackupEntry, ConfigStatus, DailyStats,
-    DiscoverableSkill, HealthStatus, LogConfig, LogFilters, McpServer as CoreMcpServer,
-    ModelPricingInfo as CoreModelPricingInfo, ModelStats, OmoLocalFileData, OpenClawAgentsDefaults,
-    OpenClawDefaultModel, OpenClawEnvConfig, OpenClawModelCatalogEntry, OpenClawToolsConfig,
-    OptimizerConfig, PaginatedLogs, Provider as CoreProvider, ProviderLimitStatus, ProviderStats,
-    RectifierConfig, RequestLogDetail, SkillRepo, SkillsMigrationPayload, StreamCheckConfig,
-    StreamCheckResult, StreamCheckService, UniversalProvider, UsageSummary, WebDavSyncSettings,
-    WslShellPreferenceInput, WEB_COMPAT_TAURI_COMMANDS,
+    DiscoverableSkill, HealthStatus, ImportSkillSelection as CoreImportSkillSelection, LogConfig,
+    LogFilters, McpServer as CoreMcpServer, ModelPricingInfo as CoreModelPricingInfo, ModelStats,
+    OmoLocalFileData, OpenClawAgentsDefaults, OpenClawDefaultModel, OpenClawEnvConfig,
+    OpenClawModelCatalogEntry, OpenClawToolsConfig, OptimizerConfig, PaginatedLogs,
+    Provider as CoreProvider, ProviderLimitStatus, ProviderStats, RectifierConfig,
+    RequestLogDetail, SkillApps as CoreSkillApps, SkillRepo, SkillsMigrationPayload,
+    StreamCheckConfig, StreamCheckResult, StreamCheckService, UniversalProvider, UsageSummary,
+    WebDavSyncSettings, WslShellPreferenceInput, WEB_COMPAT_TAURI_COMMANDS,
 };
 
 /// 核心上下文
@@ -93,13 +94,13 @@ pub fn get_current_provider(ctx: &CoreContext, app: &str) -> Result<String, Stri
 /// 添加供应商
 pub fn add_provider(ctx: &CoreContext, app: &str, provider: Provider) -> Result<bool, String> {
     let app_type = AppType::from_str(app).map_err(|e| e.to_string())?;
-    ProviderService::add(ctx.app_state(), app_type, provider).map_err(|e| e.to_string())
+    ProviderService::add(ctx.app_state(), app_type, provider, true).map_err(|e| e.to_string())
 }
 
 /// 更新供应商
 pub fn update_provider(ctx: &CoreContext, app: &str, provider: Provider) -> Result<bool, String> {
     let app_type = AppType::from_str(app).map_err(|e| e.to_string())?;
-    ProviderService::update(ctx.app_state(), app_type, provider).map_err(|e| e.to_string())
+    ProviderService::update(ctx.app_state(), app_type, None, provider).map_err(|e| e.to_string())
 }
 
 /// 删除供应商
@@ -256,9 +257,10 @@ pub async fn stream_check_provider(
         .get(provider_id)
         .ok_or_else(|| format!("供应商 {provider_id} 不存在"))?;
 
-    let result = StreamCheckService::check_with_retry(&app_type, provider, &config)
-        .await
-        .map_err(|e| e.to_string())?;
+    let result =
+        StreamCheckService::check_with_retry(&app_type, provider, &config, None, None, None)
+            .await
+            .map_err(|e| e.to_string())?;
 
     let _ = ctx.app_state().db.save_stream_check_log(
         provider_id,
@@ -310,18 +312,20 @@ pub async fn stream_check_all_providers(
             }
         }
 
-        let result = StreamCheckService::check_with_retry(&app_type, &provider, &config)
-            .await
-            .unwrap_or_else(|e| StreamCheckResult {
-                status: HealthStatus::Failed,
-                success: false,
-                message: e.to_string(),
-                response_time_ms: None,
-                http_status: None,
-                model_used: String::new(),
-                tested_at: Utc::now().timestamp(),
-                retry_count: 0,
-            });
+        let result =
+            StreamCheckService::check_with_retry(&app_type, &provider, &config, None, None, None)
+                .await
+                .unwrap_or_else(|e| StreamCheckResult {
+                    status: HealthStatus::Failed,
+                    success: false,
+                    message: e.to_string(),
+                    response_time_ms: None,
+                    http_status: None,
+                    model_used: String::new(),
+                    tested_at: Utc::now().timestamp(),
+                    retry_count: 0,
+                    error_category: None,
+                });
 
         let _ = ctx.app_state().db.save_stream_check_log(
             &id,
@@ -357,10 +361,11 @@ pub fn get_usage_summary(
     ctx: &CoreContext,
     start_date: Option<i64>,
     end_date: Option<i64>,
+    app_type: Option<&str>,
 ) -> Result<UsageSummary, String> {
     ctx.app_state()
         .db
-        .get_usage_summary(start_date, end_date)
+        .get_usage_summary(start_date, end_date, app_type)
         .map_err(|e| e.to_string())
 }
 
@@ -368,24 +373,35 @@ pub fn get_usage_trends(
     ctx: &CoreContext,
     start_date: Option<i64>,
     end_date: Option<i64>,
+    app_type: Option<&str>,
 ) -> Result<Vec<DailyStats>, String> {
     ctx.app_state()
         .db
-        .get_daily_trends(start_date, end_date)
+        .get_daily_trends(start_date, end_date, app_type)
         .map_err(|e| e.to_string())
 }
 
-pub fn get_provider_stats(ctx: &CoreContext) -> Result<Vec<ProviderStats>, String> {
+pub fn get_provider_stats(
+    ctx: &CoreContext,
+    start_date: Option<i64>,
+    end_date: Option<i64>,
+    app_type: Option<&str>,
+) -> Result<Vec<ProviderStats>, String> {
     ctx.app_state()
         .db
-        .get_provider_stats()
+        .get_provider_stats(start_date, end_date, app_type)
         .map_err(|e| e.to_string())
 }
 
-pub fn get_model_stats(ctx: &CoreContext) -> Result<Vec<ModelStats>, String> {
+pub fn get_model_stats(
+    ctx: &CoreContext,
+    start_date: Option<i64>,
+    end_date: Option<i64>,
+    app_type: Option<&str>,
+) -> Result<Vec<ModelStats>, String> {
     ctx.app_state()
         .db
-        .get_model_stats()
+        .get_model_stats(start_date, end_date, app_type)
         .map_err(|e| e.to_string())
 }
 
@@ -708,8 +724,7 @@ pub fn export_config_to_file(
     file_path: &str,
 ) -> Result<serde_json::Value, String> {
     let target_path = std::path::PathBuf::from(file_path);
-    export_database_to_file(ctx.app_state().db.clone(), &target_path)
-        .map_err(|e| e.to_string())?;
+    export_database_to_file(ctx.app_state().db.clone(), &target_path).map_err(|e| e.to_string())?;
     Ok(serde_json::json!({
         "success": true,
         "message": "SQL exported successfully",
@@ -739,8 +754,10 @@ pub fn import_config_from_sql_bytes(
 ) -> Result<serde_json::Value, String> {
     let sql_content =
         std::str::from_utf8(sql_bytes).map_err(|e| format!("SQL 文件编码无效: {e}"))?;
-    import_database_with_sync(ctx.app_state().db.clone(), |db| db.import_sql_string(sql_content))
-        .map_err(|e| e.to_string())
+    import_database_with_sync(ctx.app_state().db.clone(), |db| {
+        db.import_sql_string(sql_content)
+    })
+    .map_err(|e| e.to_string())
 }
 
 /// 同步当前供应商到 live 配置
@@ -1372,10 +1389,10 @@ pub fn scan_unmanaged_skills(ctx: &CoreContext) -> Result<serde_json::Value, Str
 /// 从应用目录导入 Skills
 pub fn import_skills_from_apps(
     ctx: &CoreContext,
-    directories: Vec<String>,
+    imports: Vec<ImportSkillSelection>,
 ) -> Result<serde_json::Value, String> {
-    let installed = SkillService::import_from_apps(&ctx.app_state().db, directories)
-        .map_err(|e| e.to_string())?;
+    let installed =
+        SkillService::import_from_apps(&ctx.app_state().db, imports).map_err(|e| e.to_string())?;
     serde_json::to_value(installed).map_err(|e| e.to_string())
 }
 

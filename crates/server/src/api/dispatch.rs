@@ -247,6 +247,52 @@ fn get_optional_i64_param(params: &Value, keys: &[&str]) -> Result<Option<i64>, 
     Ok(None)
 }
 
+fn get_optional_str_param<'a>(
+    params: &'a Value,
+    keys: &[&str],
+) -> Result<Option<&'a str>, RpcError> {
+    for key in keys {
+        match params.get(*key) {
+            Some(value) => {
+                return value
+                    .as_str()
+                    .map(Some)
+                    .ok_or_else(|| RpcError::invalid_params(format!("invalid '{}' field", key)));
+            }
+            None => continue,
+        }
+    }
+
+    Ok(None)
+}
+
+fn parse_skill_imports_param(
+    params: &Value,
+) -> Result<Vec<cc_switch_core::CoreImportSkillSelection>, RpcError> {
+    let imports_value = params
+        .get("imports")
+        .or_else(|| params.get("directories"))
+        .cloned()
+        .ok_or_else(|| RpcError::invalid_params("missing 'imports' field"))?;
+
+    if let Ok(imports) = serde_json::from_value::<Vec<cc_switch_core::CoreImportSkillSelection>>(
+        imports_value.clone(),
+    ) {
+        return Ok(imports);
+    }
+
+    let directories: Vec<String> = serde_json::from_value(imports_value)
+        .map_err(|e| RpcError::invalid_params(format!("invalid 'imports' value: {e}")))?;
+
+    Ok(directories
+        .into_iter()
+        .map(|directory| cc_switch_core::CoreImportSkillSelection {
+            directory,
+            apps: cc_switch_core::CoreSkillApps::default(),
+        })
+        .collect())
+}
+
 fn get_optional_u32_param(params: &Value, keys: &[&str]) -> Result<Option<u32>, RpcError> {
     for key in keys {
         match params.get(*key) {
@@ -633,8 +679,9 @@ pub async fn dispatch_command(
         "get_usage_summary" => {
             let start_date = get_optional_i64_param(params, &["startDate", "start_date"])?;
             let end_date = get_optional_i64_param(params, &["endDate", "end_date"])?;
+            let app_type = get_optional_str_param(params, &["appType", "app_type"])?;
 
-            let summary = cc_switch_core::get_usage_summary(core, start_date, end_date)
+            let summary = cc_switch_core::get_usage_summary(core, start_date, end_date, app_type)
                 .map_err(RpcError::app_error)?;
 
             serde_json::to_value(summary).map_err(|e| RpcError::internal_error(e.to_string()))
@@ -643,21 +690,30 @@ pub async fn dispatch_command(
         "get_usage_trends" => {
             let start_date = get_optional_i64_param(params, &["startDate", "start_date"])?;
             let end_date = get_optional_i64_param(params, &["endDate", "end_date"])?;
+            let app_type = get_optional_str_param(params, &["appType", "app_type"])?;
 
-            let trends = cc_switch_core::get_usage_trends(core, start_date, end_date)
+            let trends = cc_switch_core::get_usage_trends(core, start_date, end_date, app_type)
                 .map_err(RpcError::app_error)?;
 
             serde_json::to_value(trends).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "get_provider_stats" => {
-            let stats = cc_switch_core::get_provider_stats(core).map_err(RpcError::app_error)?;
+            let start_date = get_optional_i64_param(params, &["startDate", "start_date"])?;
+            let end_date = get_optional_i64_param(params, &["endDate", "end_date"])?;
+            let app_type = get_optional_str_param(params, &["appType", "app_type"])?;
+            let stats = cc_switch_core::get_provider_stats(core, start_date, end_date, app_type)
+                .map_err(RpcError::app_error)?;
 
             serde_json::to_value(stats).map_err(|e| RpcError::internal_error(e.to_string()))
         }
 
         "get_model_stats" => {
-            let stats = cc_switch_core::get_model_stats(core).map_err(RpcError::app_error)?;
+            let start_date = get_optional_i64_param(params, &["startDate", "start_date"])?;
+            let end_date = get_optional_i64_param(params, &["endDate", "end_date"])?;
+            let app_type = get_optional_str_param(params, &["appType", "app_type"])?;
+            let stats = cc_switch_core::get_model_stats(core, start_date, end_date, app_type)
+                .map_err(RpcError::app_error)?;
 
             serde_json::to_value(stats).map_err(|e| RpcError::internal_error(e.to_string()))
         }
@@ -1628,15 +1684,8 @@ pub async fn dispatch_command(
         }
 
         "import_skills_from_apps" => {
-            let directories_value = params
-                .get("directories")
-                .cloned()
-                .ok_or_else(|| RpcError::invalid_params("missing 'directories' field"))?;
-            let directories: Vec<String> =
-                serde_json::from_value(directories_value).map_err(|e| {
-                    RpcError::invalid_params(format!("invalid 'directories' value: {e}"))
-                })?;
-            let installed = cc_switch_core::import_skills_from_apps(core, directories)
+            let imports = parse_skill_imports_param(params)?;
+            let installed = cc_switch_core::import_skills_from_apps(core, imports)
                 .map_err(RpcError::app_error)?;
             Ok(installed)
         }
@@ -2578,5 +2627,49 @@ pub async fn dispatch_command(
         }
 
         _ => Err(RpcError::method_not_found(method)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn parse_skill_imports_supports_new_imports_shape() {
+        let params = json!({
+            "imports": [
+                {
+                    "directory": "demo-skill",
+                    "apps": {
+                        "claude": true,
+                        "codex": false,
+                        "gemini": true,
+                        "opencode": false
+                    }
+                }
+            ]
+        });
+
+        let imports = parse_skill_imports_param(&params).expect("should parse imports");
+
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].directory, "demo-skill");
+        assert!(imports[0].apps.claude);
+        assert!(imports[0].apps.gemini);
+        assert!(!imports[0].apps.codex);
+    }
+
+    #[test]
+    fn parse_skill_imports_supports_legacy_directories_shape() {
+        let params = json!({
+            "directories": ["legacy-skill"]
+        });
+
+        let imports = parse_skill_imports_param(&params).expect("should parse directories");
+
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].directory, "legacy-skill");
+        assert_eq!(imports[0].apps, cc_switch_core::CoreSkillApps::default());
     }
 }

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-use std::sync::Arc;
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -10,19 +8,17 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt};
 use serde::Deserialize;
+use std::collections::HashSet;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 
 use crate::rpc::{RpcError, RpcRequest, RpcResponse};
 use crate::state::ServerState;
 
-use super::{
-    dispatch::dispatch_command,
-    session_auth::has_valid_session,
-};
+use super::{dispatch::dispatch_command, session_auth::has_valid_session};
 
 /// Protocol-only WebSocket methods that do not participate in business command dispatch.
 pub const WS_PROTOCOL_METHODS: &[&str] = &["event.subscribe", "event.unsubscribe", "ping"];
-
 
 #[derive(Deserialize)]
 pub struct WsAuthQuery {
@@ -113,9 +109,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<ServerState>) {
     // Message receiving loop
     while let Some(Ok(msg)) = ws_receiver.next().await {
         if let Message::Text(text) = msg {
-            if let Some(response) =
-                handle_message(&state, &mut subscriptions, &text).await
-            {
+            if let Some(response) = handle_message(&state, &mut subscriptions, &text).await {
                 if tx.send(response).await.is_err() {
                     break;
                 }

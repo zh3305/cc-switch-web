@@ -44,7 +44,7 @@
 ### 阶段 3：完成正式发版
 
 - [ ] 提交并推送 `main`
-- [ ] 在当前 `main` 提交上创建新 tag（已知 `v3.13.2` 失败，下一次使用 `v3.13.3`）
+- [ ] 在当前 `main` 提交上创建新 tag（`v3.13.3` 已失败，下一次应使用新的 release tag）
 - [ ] 观察 GitHub Actions，确认 `Build Web Release` 触发并生成 Release 资产
 
 ## 决策记录
@@ -62,12 +62,27 @@
   - `src-tauri/src/commands/misc.rs`
   - `src-tauri/src/commands/model_fetch.rs`
   - `src-tauri/src/commands/session_manager.rs`
-- 已通过本地验证：
-  - `corepack pnpm format:check`
-  - `corepack pnpm typecheck`
-  - `corepack pnpm test:unit`
-- 已通过本地验证：
-  - `~/.cargo/bin/cargo fmt --check --manifest-path src-tauri/Cargo.toml`
-- 单元与集成测试结果为 `34` 个测试文件、`210` 个测试全部通过。
-- 本地 `cargo check --manifest-path crates/core/Cargo.toml` / `crates/server/Cargo.toml` 仍受当前 WSL 缺少 `pkg-config` 与 OpenSSL 开发环境限制，无法在本机完成到底；后续以 GitHub Actions 的完整构建环境为准。
-- 下一步为提交当前修复、推送 `main`，并在当前主线提交上创建新的 Web release tag `v3.13.3`。
+- 在上游继续演进后，又发现 `crates/core` 与 `crates/server` 的 Web 适配层仍有一轮接口签名滞后，具体包括：
+  - `ProviderService::{add, update}` 参数签名变化
+  - `StreamCheckService::check_with_retry` 与 `StreamCheckResult` 字段扩展
+  - `UsageStatsService` 查询接口新增 `app_type` 过滤参数
+  - `SkillService::import_from_apps` 改为接收结构化 `ImportSkillSelection`
+- 本轮已完成以下对齐修复：
+  - `crates/core/src/lib.rs` 对齐上游新接口签名，并补齐 `ImportSkillSelection` / `SkillApps` 的 re-export
+  - `crates/server/src/api/dispatch.rs` 同时兼容新的 `imports` 结构与旧的 `directories` 结构
+  - `src-tauri/Cargo.toml` 将 `reqwest` 调整为 `rustls` 路径，避免本地 `cargo check` 再被 `openssl-sys` 卡住
+- 本轮新增本地测试：
+  - `parse_skill_imports_supports_new_imports_shape`
+  - `parse_skill_imports_supports_legacy_directories_shape`
+- 当前已确认通过的本地验证：
+  - `corepack pnpm build:web`
+  - `~/.cargo/bin/cargo fmt --check --manifest-path crates/core/Cargo.toml`
+  - `~/.cargo/bin/cargo fmt --check --manifest-path crates/server/Cargo.toml`
+  - `~/.cargo/bin/cargo check --manifest-path crates/core/Cargo.toml`
+  - `~/.cargo/bin/cargo check --manifest-path crates/server/Cargo.toml`
+  - `~/.cargo/bin/cargo test --manifest-path crates/core/Cargo.toml --lib`
+  - `~/.cargo/bin/cargo test --manifest-path crates/server/Cargo.toml parse_skill_imports`
+- 新确认的环境事实：
+  - 目前本地 `crates/server` 的失败点已不再是 Rust 接口错误，而是构建前必须先生成前端 `dist/`，否则 `RustEmbed` 会因为目录不存在而失败。
+  - `reqwest` 切到 `rustls` 后，本机已能完成 `crates/core` 与 `crates/server` 的 `cargo check`，不再受这条 OpenSSL 依赖链阻塞。
+- 下一步应先整理并提交当前修复，再在该提交上创建新的 Web release tag；由于 `v3.13.3` 已失败，后续必须使用新的 tag，而不是复用旧 tag。
