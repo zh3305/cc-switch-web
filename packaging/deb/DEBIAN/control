@@ -4,6 +4,6 @@ Section: net
 Priority: optional
 Architecture: __ARCH__
 Maintainer: CC-Switch Web Maintainers <noreply@cc-switch-web.local>
-Depends: adduser, systemd, libc6 (>= 2.31)
+Depends: systemd, libc6 (>= 2.31)
 Description: CC-Switch Web server
  Web-only runtime for cc-switch, packaged as a systemd-managed Linux service.
