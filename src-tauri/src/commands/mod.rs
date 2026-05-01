@@ -18,7 +18,9 @@ mod env;
 #[cfg(feature = "desktop")]
 mod failover;
 mod global_proxy;
+#[cfg(feature = "desktop")]
 mod hermes;
+#[cfg(feature = "desktop")]
 mod import_export;
 #[cfg(feature = "desktop")]
 mod mcp;
@@ -70,7 +72,9 @@ pub use env::*;
 #[cfg(feature = "desktop")]
 pub use failover::*;
 pub use global_proxy::*;
+#[cfg(feature = "desktop")]
 pub use hermes::*;
+#[cfg(feature = "desktop")]
 pub use import_export::*;
 #[cfg(feature = "desktop")]
 pub use mcp::*;
