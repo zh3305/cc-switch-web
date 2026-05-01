@@ -635,7 +635,7 @@ pub fn restart_app() -> Result<bool, String> {
 /// 检查更新 (stub - not applicable for web server)
 /// Returns the update URL for the client to handle
 pub fn check_for_updates() -> Result<String, String> {
-    Ok("https://github.com/farion1231/cc-switch/releases/latest".to_string())
+    Ok("https://github.com/zh3305/cc-switch-web/releases/latest".to_string())
 }
 
 /// 判断是否为便携版运行
