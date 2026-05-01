@@ -24,7 +24,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, ChevronRight, Download, Loader2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Download,
+  Loader2,
+  Wand2,
+} from "lucide-react";
 import EndpointSpeedTest from "./EndpointSpeedTest";
 import { ApiKeySection, EndpointField, ModelInputWithFetch } from "./shared";
 import { CopilotAuthSection } from "./CopilotAuthSection";
@@ -76,6 +82,8 @@ interface ClaudeFormFieldsProps {
   isCodexOauthAuthenticated?: boolean;
   selectedCodexAccountId?: string | null;
   onCodexAccountSelect?: (accountId: string | null) => void;
+  codexFastMode?: boolean;
+  onCodexFastModeChange?: (enabled: boolean) => void;
 
   // Template Values
   templateValueEntries: Array<[string, TemplateValueConfig]>;
@@ -96,14 +104,12 @@ interface ClaudeFormFieldsProps {
   // Model Selector
   shouldShowModelSelector: boolean;
   claudeModel: string;
-  reasoningModel: string;
   defaultHaikuModel: string;
   defaultSonnetModel: string;
   defaultOpusModel: string;
   onModelChange: (
     field:
       | "ANTHROPIC_MODEL"
-      | "ANTHROPIC_REASONING_MODEL"
       | "ANTHROPIC_DEFAULT_HAIKU_MODEL"
       | "ANTHROPIC_DEFAULT_SONNET_MODEL"
       | "ANTHROPIC_DEFAULT_OPUS_MODEL",
@@ -144,6 +150,8 @@ export function ClaudeFormFields({
   isCodexOauthPreset,
   selectedCodexAccountId,
   onCodexAccountSelect,
+  codexFastMode,
+  onCodexFastModeChange,
   templateValueEntries,
   templateValues,
   templatePresetName,
@@ -158,7 +166,6 @@ export function ClaudeFormFields({
   onAutoSelectChange,
   shouldShowModelSelector,
   claudeModel,
-  reasoningModel,
   defaultHaikuModel,
   defaultSonnetModel,
   defaultOpusModel,
@@ -174,7 +181,6 @@ export function ClaudeFormFields({
   const { t } = useTranslation();
   const hasAnyAdvancedValue = !!(
     claudeModel ||
-    reasoningModel ||
     defaultHaikuModel ||
     defaultSonnetModel ||
     defaultOpusModel ||
@@ -372,6 +378,8 @@ export function ClaudeFormFields({
         <CodexOAuthSection
           selectedAccountId={selectedCodexAccountId}
           onAccountSelect={onCodexAccountSelect}
+          fastModeEnabled={codexFastMode}
+          onFastModeChange={onCodexFastModeChange}
         />
       )}
 
@@ -571,23 +579,61 @@ export function ClaudeFormFields({
             <div className="space-y-1 pt-2 border-t">
               <div className="flex items-center justify-between">
                 <FormLabel>{t("providerForm.modelMappingLabel")}</FormLabel>
-                {!isCopilotPreset && (
+                <div className="flex gap-2">
+                  {/* 一键设置按钮 */}
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleFetchModels}
-                    disabled={isFetchingModels}
+                    onClick={() => {
+                      const value =
+                        claudeModel ||
+                        defaultHaikuModel ||
+                        defaultSonnetModel ||
+                        defaultOpusModel;
+                      if (value) {
+                        onModelChange("ANTHROPIC_MODEL", value);
+                        onModelChange("ANTHROPIC_DEFAULT_HAIKU_MODEL", value);
+                        onModelChange("ANTHROPIC_DEFAULT_SONNET_MODEL", value);
+                        onModelChange("ANTHROPIC_DEFAULT_OPUS_MODEL", value);
+                        toast.success(
+                          t("providerForm.quickSetSuccess", {
+                            defaultValue: "已将模型名称应用到所有字段",
+                          }),
+                        );
+                      }
+                    }}
+                    disabled={
+                      !claudeModel &&
+                      !defaultHaikuModel &&
+                      !defaultSonnetModel &&
+                      !defaultOpusModel
+                    }
                     className="h-7 gap-1"
                   >
-                    {isFetchingModels ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5" />
-                    )}
-                    {t("providerForm.fetchModels")}
+                    <Wand2 className="h-3.5 w-3.5" />
+                    {t("providerForm.quickSetModels", {
+                      defaultValue: "一键设置",
+                    })}
                   </Button>
-                )}
+                  {!isCopilotPreset && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleFetchModels}
+                      disabled={isFetchingModels}
+                      className="h-7 gap-1"
+                    >
+                      {isFetchingModels ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      {t("providerForm.fetchModels")}
+                    </Button>
+                  )}
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 {t("providerForm.modelMappingHint")}
@@ -606,18 +652,6 @@ export function ClaudeFormFields({
                   claudeModel,
                   "ANTHROPIC_MODEL",
                   t("providerForm.modelPlaceholder", { defaultValue: "" }),
-                )}
-              </div>
-
-              {/* 推理模型 */}
-              <div className="space-y-2">
-                <FormLabel htmlFor="reasoningModel">
-                  {t("providerForm.anthropicReasoningModel")}
-                </FormLabel>
-                {renderModelInput(
-                  "reasoningModel",
-                  reasoningModel,
-                  "ANTHROPIC_REASONING_MODEL",
                 )}
               </div>
 

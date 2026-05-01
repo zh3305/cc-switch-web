@@ -3,31 +3,11 @@
 set -e
 
 SERVICE_NAME="cc-switch-web.service"
-SERVICE_USER="cc-switch-web"
-SERVICE_GROUP="cc-switch-web"
 STATE_DIR="/var/lib/cc-switch-web"
 LOG_DIR="/var/log/cc-switch-web"
 
-ensure_group() {
-    if ! getent group "$SERVICE_GROUP" >/dev/null 2>&1; then
-        addgroup --system "$SERVICE_GROUP"
-    fi
-}
-
-ensure_user() {
-    if ! id -u "$SERVICE_USER" >/dev/null 2>&1; then
-        adduser \
-            --system \
-            --ingroup "$SERVICE_GROUP" \
-            --home "$STATE_DIR" \
-            --shell /usr/sbin/nologin \
-            --no-create-home \
-            "$SERVICE_USER"
-    fi
-}
-
 ensure_directories() {
-    install -d -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$STATE_DIR" "$LOG_DIR"
+    install -d -o root -g root "$STATE_DIR" "$LOG_DIR"
 }
 
 reload_and_start_service() {
@@ -42,8 +22,6 @@ reload_and_start_service() {
 
 case "$1" in
 configure)
-    ensure_group
-    ensure_user
     ensure_directories
     reload_and_start_service
     ;;

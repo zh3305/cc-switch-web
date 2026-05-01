@@ -5,8 +5,6 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=cc-switch-web
-Group=cc-switch-web
 Environment=HOME=/var/lib/cc-switch-web
 Environment=XDG_CONFIG_HOME=/var/lib/cc-switch-web/.config
 Environment=XDG_DATA_HOME=/var/lib/cc-switch-web/.local/share

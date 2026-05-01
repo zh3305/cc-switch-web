@@ -1,5 +1,6 @@
 # CC-Switch Web systemd 默认环境变量。
 # 如需对局域网开放访问，可把监听地址改为 0.0.0.0。
+# 如需管理某个登录用户的 Claude/Codex 配置目录，请在应用内显式配置目标目录。
 
 CC_SWITCH_HOST=127.0.0.1
 CC_SWITCH_PORT=17666

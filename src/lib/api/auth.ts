@@ -63,6 +63,7 @@ export interface ManagedAuthAccount {
   avatar_url: string | null;
   authenticated_at: number;
   is_default: boolean;
+  github_domain: string;
 }
 
 export interface ManagedAuthStatus {
@@ -88,10 +89,12 @@ export interface CombinedAuthApi {
   checkSession(): Promise<SessionCheckResponse>;
   authStartLogin(
     authProvider: ManagedAuthProvider,
+    githubDomain?: string,
   ): Promise<ManagedAuthDeviceCodeResponse>;
   authPollForAccount(
     authProvider: ManagedAuthProvider,
     deviceCode: string,
+    githubDomain?: string,
   ): Promise<ManagedAuthAccount | null>;
   authListAccounts(
     authProvider: ManagedAuthProvider,
@@ -110,19 +113,23 @@ export interface CombinedAuthApi {
 
 export async function authStartLogin(
   authProvider: ManagedAuthProvider,
+  githubDomain?: string,
 ): Promise<ManagedAuthDeviceCodeResponse> {
   return invoke<ManagedAuthDeviceCodeResponse>("auth_start_login", {
     authProvider,
+    githubDomain: githubDomain || null,
   });
 }
 
 export async function authPollForAccount(
   authProvider: ManagedAuthProvider,
   deviceCode: string,
+  githubDomain?: string,
 ): Promise<ManagedAuthAccount | null> {
   return invoke<ManagedAuthAccount | null>("auth_poll_for_account", {
     authProvider,
     deviceCode,
+    githubDomain: githubDomain || null,
   });
 }
 

@@ -91,3 +91,9 @@
   - 独立二进制：`release-web-test/cc-switch-web-v3.13.3-linux-x86_64-ubuntu20.04`
   - Debian 安装包：`release-web-test/cc-switch-web_3.13.3_amd64.deb`
   - `.deb` 内已包含 `systemd` service、默认环境文件与安装后的主程序路径。
+- 新确认的部署约束：
+  - 当前 Web `.deb` 不是上游桌面 Tauri “按登录用户运行”的官方包，而是 `systemd` 系统服务形态。
+  - 当前正式方案改为让 `cc-switch-web.service` 以 `root` 运行，不再在安装阶段创建 `cc-switch-web` 专用服务用户。
+  - 服务仍显式将 `HOME`、`XDG_CONFIG_HOME`、`XDG_DATA_HOME` 固定到 `/var/lib/cc-switch-web`，因此应用自身状态仍集中保存在系统目录，而不是 `root` 的真实家目录。
+  - 需要直接管理真实登录用户 CLI 配置时，不做用户名探测，必须通过应用已有的目录覆盖配置显式指定目标目录，例如 `/home/<user>/.claude`。
+  - 本轮新增轻量验证脚本 `tests/test-web-deb-root-service.sh`，仅验证 Debian 打包模板的服务身份、依赖项和 maintainer script 行为，不依赖完整 Rust 构建。
