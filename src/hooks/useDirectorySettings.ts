@@ -58,8 +58,6 @@ const sanitizeDir = (value?: string | null): string | undefined => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-
-
 export interface UseDirectorySettingsProps {
   settings: SettingsFormState | null;
   onUpdateSettings: (updates: Partial<SettingsFormState>) => void;

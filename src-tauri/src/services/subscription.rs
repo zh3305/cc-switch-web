@@ -934,9 +934,9 @@ fn parse_gemini_file_json(content: &str) -> GeminiCredentials {
 
 /// Gemini OAuth Client 凭据（来自 Gemini CLI 源码 google-gemini/gemini-cli）
 /// 注意：这些是公开的客户端凭据，但在推送时可能会触发 GitHub 的 Push Protection。
-const GEMINI_OAUTH_CLIENT_ID: &str = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com";
+const GEMINI_OAUTH_CLIENT_ID: &str =
+    "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com";
 const GEMINI_OAUTH_CLIENT_SECRET: &str = "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";
-
 
 /// 使用 refresh_token 刷新 Gemini access token
 ///
