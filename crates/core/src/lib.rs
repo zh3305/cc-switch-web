@@ -613,6 +613,13 @@ pub fn get_config_status(app: &str) -> Result<ConfigStatus, String> {
                 path: cc_switch::get_openclaw_dir().to_string_lossy().to_string(),
             }
         }
+        AppType::Hermes => {
+            let config_path = cc_switch::hermes_config::get_hermes_config_path();
+            ConfigStatus {
+                exists: config_path.exists(),
+                path: cc_switch::hermes_config::get_hermes_dir().to_string_lossy().to_string(),
+            }
+        }
     };
 
     Ok(status)
@@ -650,6 +657,7 @@ pub fn get_config_dir(app: &str) -> Result<String, String> {
         AppType::Gemini => cc_switch::get_gemini_dir(),
         AppType::OpenCode => cc_switch::get_opencode_dir(),
         AppType::OpenClaw => cc_switch::get_openclaw_dir(),
+        AppType::Hermes => cc_switch::hermes_config::get_hermes_dir(),
     };
     Ok(dir.to_string_lossy().to_string())
 }
