@@ -89,10 +89,12 @@ export interface CombinedAuthApi {
   checkSession(): Promise<SessionCheckResponse>;
   authStartLogin(
     authProvider: ManagedAuthProvider,
+    githubDomain?: string,
   ): Promise<ManagedAuthDeviceCodeResponse>;
   authPollForAccount(
     authProvider: ManagedAuthProvider,
     deviceCode: string,
+    githubDomain?: string,
   ): Promise<ManagedAuthAccount | null>;
   authListAccounts(
     authProvider: ManagedAuthProvider,
