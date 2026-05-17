@@ -620,6 +620,15 @@ pub fn get_config_status(app: &str) -> Result<ConfigStatus, String> {
                 path: cc_switch::hermes_config::get_hermes_dir().to_string_lossy().to_string(),
             }
         }
+        AppType::ClaudeDesktop => {
+            let profile_path = cc_switch::get_config_library_path()
+                .map_err(|e| e.to_string())?
+                .join("claude_desktop_config.json");
+            ConfigStatus {
+                exists: profile_path.exists(),
+                path: profile_path.to_string_lossy().to_string(),
+            }
+        }
     };
 
     Ok(status)
@@ -658,6 +667,7 @@ pub fn get_config_dir(app: &str) -> Result<String, String> {
         AppType::OpenCode => cc_switch::get_opencode_dir(),
         AppType::OpenClaw => cc_switch::get_openclaw_dir(),
         AppType::Hermes => cc_switch::hermes_config::get_hermes_dir(),
+        AppType::ClaudeDesktop => cc_switch::get_config_library_path().map_err(|e| e.to_string())?,
     };
     Ok(dir.to_string_lossy().to_string())
 }

@@ -5,6 +5,7 @@
 `workflow/260418-upstream-sync-strategy.md` - 面向长期频繁合并的 Web fork 同步策略、分阶段抽离路线与标准同步流程
 `workflow/260418-upstream-sync-execution-plan.md` - 长期频繁合并的实际执行计划与标准同步清单；准备再次 merge upstream 前优先阅读
 `workflow/260501-merge-upstream-v3141.md` - 合并上游 v3.14.1 tag，记录冲突解决与验证结果
+`workflow/260517-merge-upstream-v3150.md` - 合并上游 v3.15.0 tag，记录同步策略判断、冲突解决与编译验证结果
 
 ## 已完成任务文档
 `workflow/done/260417-merge-upstream-cc-switch.md` - 首次同步合并上游 cc-switch
@@ -16,3 +17,4 @@
 - 平台差异优先收敛到 Web 适配层与发布层，避免在高频上游文件中散落大量 fork 定制。
 - Web/headless 运行时必须在进程启动早期显式初始化 rustls `CryptoProvider`；上游依赖树可能同时启用 `ring` 与 `aws-lc-rs`，若丢失该初始化会在首次 HTTPS/TLS 请求时 panic。
 - `src-tauri/Cargo.toml` 中 `reqwest` 需保留 `default-features = false` 这个最小分叉，避免 Web/headless 构建重新引入 `native-tls/openssl` 和 `pkg-config` 系统依赖；其余特性尽量跟上游保持一致。
+- 自 2026-05-17 的 `v3.15.0` 同步起，本仓库本地 Rust 验证基线调整为 `1.88.0`：`1.85.0` 已不满足 `image 0.25.10` 与 `time 0.3.47` 的 MSRV，`1.95.0` 会在 `src-tauri/src/proxy/forwarder.rs` 触发 rustc ICE；后续再次同步上游前，优先复用 `1.88.0` 直到重新验证编译器状态。

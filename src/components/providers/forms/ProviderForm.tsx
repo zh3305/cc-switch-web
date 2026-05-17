@@ -50,6 +50,7 @@ import {
   hasApiKeyField,
 } from "@/utils/providerConfigUtils";
 import { mergeProviderMeta } from "@/utils/providerMetaUtils";
+import { isNonNegativeDecimalString } from "@/types/usage";
 import { getCodexCustomTemplate } from "@/config/codexTemplates";
 import CodexConfigEditor from "./CodexConfigEditor";
 import { CommonConfigEditor } from "./CommonConfigEditor";
@@ -59,6 +60,7 @@ import { Label } from "@/components/ui/label";
 import { ProviderPresetSelector } from "./ProviderPresetSelector";
 import { BasicFormFields } from "./BasicFormFields";
 import { ClaudeFormFields } from "./ClaudeFormFields";
+import { ClaudeDesktopProviderForm } from "./ClaudeDesktopProviderForm";
 import { CodexFormFields } from "./CodexFormFields";
 import { GeminiFormFields } from "./GeminiFormFields";
 import { OmoFormFields } from "./OmoFormFields";
@@ -115,7 +117,7 @@ type PresetEntry = {
     | HermesProviderPreset;
 };
 
-interface ProviderFormProps {
+export interface ProviderFormProps {
   appId: AppId;
   providerId?: string;
   submitLabel: string;
@@ -137,7 +139,15 @@ interface ProviderFormProps {
   showButtons?: boolean;
 }
 
-export function ProviderForm({
+export function ProviderForm(props: ProviderFormProps) {
+  if (props.appId === "claude-desktop") {
+    return <ClaudeDesktopProviderForm {...props} />;
+  }
+
+  return <ProviderFormFull {...props} />;
+}
+
+function ProviderFormFull({
   appId,
   providerId,
   submitLabel,
@@ -149,6 +159,10 @@ export function ProviderForm({
   initialData,
   showButtons = true,
 }: ProviderFormProps) {
+  if (appId === "claude-desktop") {
+    throw new Error("ProviderFormFull should not receive claude-desktop");
+  }
+
   const { t } = useTranslation();
   const isEditMode = Boolean(initialData);
   const queryClient = useQueryClient();
@@ -297,9 +311,16 @@ export function ProviderForm({
     },
   );
 
+  // 软校验：收集"业务约束"类问题（空值/缺项），由用户决定是否仍要保存
+  const [softIssues, setSoftIssues] = useState<string[] | null>(null);
+  const [pendingFormValues, setPendingFormValues] =
+    useState<ProviderFormData | null>(null);
+  // 确认框走的提交路径绕过了 react-hook-form 的 isSubmitting，单独追踪
+  const [isConfirmSubmitting, setIsConfirmSubmitting] = useState(false);
+
   useEffect(() => {
-    onSubmittingChange?.(isSubmitting);
-  }, [isSubmitting, onSubmittingChange]);
+    onSubmittingChange?.(isSubmitting || isConfirmSubmitting);
+  }, [isSubmitting, isConfirmSubmitting, onSubmittingChange]);
 
   const {
     apiKey,
@@ -326,8 +347,11 @@ export function ProviderForm({
   const {
     claudeModel,
     defaultHaikuModel,
+    defaultHaikuModelName,
     defaultSonnetModel,
+    defaultSonnetModelName,
     defaultOpusModel,
+    defaultOpusModelName,
     handleModelChange,
   } = useModelState({
     settingsConfig: form.getValues("settingsConfig"),
@@ -766,30 +790,52 @@ export function ProviderForm({
   const [isCommonConfigModalOpen, setIsCommonConfigModalOpen] = useState(false);
 
   const handleSubmit = async (values: ProviderFormData) => {
+    // 软性问题（业务约束，用户可选择仍要保存）
+    const issues: string[] = [];
+
+    // 模板变量未填：A 类（空值）
     if (appId === "claude" && templateValueEntries.length > 0) {
       const validation = validateTemplateValues();
       if (!validation.isValid && validation.missingField) {
-        toast.error(
+        issues.push(
           t("providerForm.fillParameter", {
             label: validation.missingField.label,
             defaultValue: `请填写 ${validation.missingField.label}`,
           }),
         );
-        return;
       }
     }
 
+    // 供应商名空：A 类
     if (!values.name.trim()) {
-      toast.error(
+      issues.push(
         t("providerForm.fillSupplierName", {
           defaultValue: "请填写供应商名称",
+        }),
+      );
+    }
+
+    const costMultiplier = pricingConfig.costMultiplier?.trim();
+    if (
+      pricingConfig.enabled &&
+      costMultiplier &&
+      !isNonNegativeDecimalString(costMultiplier)
+    ) {
+      toast.error(
+        t("settings.globalProxy.defaultCostMultiplierInvalid", {
+          defaultValue: "成本倍率必须为非负数",
         }),
       );
       return;
     }
 
+    // opencode / openclaw / hermes: providerKey 相关
+    // A 类（空）归到 issues；B 类（正则不合法 / 重复 / 状态加载中）仍硬拒绝
+    const keyPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
     if (appId === "opencode" && !isAnyOmoCategory) {
-      const keyPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+      // providerKey 是 opencode / openclaw / hermes 的主键 ID，空或格式不合法
+      // 都属于完整性约束，保留硬拒绝（mutations 层也会 throw，软化只会让错误更晦涩）
       if (!opencodeForm.opencodeProviderKey.trim()) {
         toast.error(t("opencode.providerKeyRequired"));
         return;
@@ -814,14 +860,11 @@ export function ProviderForm({
         return;
       }
       if (Object.keys(opencodeForm.opencodeModels).length === 0) {
-        toast.error(t("opencode.modelsRequired"));
-        return;
+        issues.push(t("opencode.modelsRequired"));
       }
     }
 
-    // OpenClaw: validate provider key
     if (appId === "openclaw") {
-      const keyPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
       if (!openclawForm.openclawProviderKey.trim()) {
         toast.error(t("openclaw.providerKeyRequired"));
         return;
@@ -847,9 +890,7 @@ export function ProviderForm({
       }
     }
 
-    // Hermes: validate provider key
     if (appId === "hermes") {
-      const keyPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
       if (!hermesForm.hermesProviderKey.trim()) {
         toast.error(t("hermes.form.providerKeyRequired"));
         return;
@@ -875,9 +916,7 @@ export function ProviderForm({
       }
     }
 
-    // 非官方供应商必填校验：端点和 API Key
-    // cloud_provider（如 Bedrock）通过模板变量处理认证，跳过通用校验
-    // GitHub Copilot 使用 OAuth 认证，不需要 API Key
+    // OAuth 未登录：B 类（token 根本不存在，保存了也没法建立）
     const isCopilotProvider =
       templatePreset?.providerType === "github_copilot" ||
       initialData?.meta?.providerType === "github_copilot" ||
@@ -885,7 +924,6 @@ export function ProviderForm({
     const isCodexOauthProvider =
       templatePreset?.providerType === "codex_oauth" ||
       initialData?.meta?.providerType === "codex_oauth";
-    // GitHub Copilot 必须先登录才能添加
     if (isCopilotProvider && !isCopilotAuthenticated) {
       toast.error(
         t("copilot.loginRequired", {
@@ -894,7 +932,6 @@ export function ProviderForm({
       );
       return;
     }
-    // Codex OAuth 必须先登录才能添加
     if (isCodexOauthProvider && !isCodexOauthAuthenticated) {
       toast.error(
         t("codexOauth.loginRequired", {
@@ -904,60 +941,107 @@ export function ProviderForm({
       return;
     }
 
+    // OMO Other Fields JSON：B 类（格式错了保存下去数据就坏了）
+    if (
+      appId === "opencode" &&
+      isAnyOmoCategory &&
+      omoDraft.omoOtherFieldsStr.trim()
+    ) {
+      try {
+        const otherFields = parseOmoOtherFieldsObject(
+          omoDraft.omoOtherFieldsStr,
+        );
+        if (!otherFields) {
+          toast.error(
+            t("omo.jsonMustBeObject", {
+              field: t("omo.otherFields", {
+                defaultValue: "Other Config",
+              }),
+              defaultValue: "{{field}} must be a JSON object",
+            }),
+          );
+          return;
+        }
+      } catch {
+        toast.error(
+          t("omo.invalidJson", {
+            defaultValue: "Other Fields contains invalid JSON",
+          }),
+        );
+        return;
+      }
+    }
+
+    // 非官方供应商端点 / API Key 空：A 类
+    // cloud_provider（如 Bedrock）通过模板变量处理认证，跳过通用校验
     if (category !== "official" && category !== "cloud_provider") {
       if (appId === "claude") {
         if (!isCodexOauthProvider && !baseUrl.trim()) {
-          toast.error(
+          issues.push(
             t("providerForm.endpointRequired", {
               defaultValue: "非官方供应商请填写 API 端点",
             }),
           );
-          return;
         }
         if (!isCopilotProvider && !isCodexOauthProvider && !apiKey.trim()) {
-          toast.error(
+          issues.push(
             t("providerForm.apiKeyRequired", {
               defaultValue: "非官方供应商请填写 API Key",
             }),
           );
-          return;
         }
       } else if (appId === "codex") {
         if (!codexBaseUrl.trim()) {
-          toast.error(
+          issues.push(
             t("providerForm.endpointRequired", {
               defaultValue: "非官方供应商请填写 API 端点",
             }),
           );
-          return;
         }
         if (!codexApiKey.trim()) {
-          toast.error(
+          issues.push(
             t("providerForm.apiKeyRequired", {
               defaultValue: "非官方供应商请填写 API Key",
             }),
           );
-          return;
         }
       } else if (appId === "gemini") {
         if (!geminiBaseUrl.trim()) {
-          toast.error(
+          issues.push(
             t("providerForm.endpointRequired", {
               defaultValue: "非官方供应商请填写 API 端点",
             }),
           );
-          return;
         }
         if (!geminiApiKey.trim()) {
-          toast.error(
+          issues.push(
             t("providerForm.apiKeyRequired", {
               defaultValue: "非官方供应商请填写 API Key",
             }),
           );
-          return;
         }
       }
     }
+
+    if (issues.length > 0) {
+      // 弹确认框让用户决定是否仍要保存
+      setSoftIssues(issues);
+      setPendingFormValues(values);
+      return;
+    }
+
+    await performSubmit(values);
+  };
+
+  const performSubmit = async (values: ProviderFormData) => {
+    // OAuth / 其它身份识别（与 handleSubmit 保持一致）
+    const isCopilotProvider =
+      templatePreset?.providerType === "github_copilot" ||
+      initialData?.meta?.providerType === "github_copilot" ||
+      baseUrl.includes("githubcopilot.com");
+    const isCodexOauthProvider =
+      templatePreset?.providerType === "codex_oauth" ||
+      initialData?.meta?.providerType === "codex_oauth";
 
     let settingsConfig: string;
 
@@ -999,29 +1083,12 @@ export function ProviderForm({
         omoConfig.categories = omoDraft.omoCategories;
       }
       if (omoDraft.omoOtherFieldsStr.trim()) {
-        try {
-          const otherFields = parseOmoOtherFieldsObject(
-            omoDraft.omoOtherFieldsStr,
-          );
-          if (!otherFields) {
-            toast.error(
-              t("omo.jsonMustBeObject", {
-                field: t("omo.otherFields", {
-                  defaultValue: "Other Config",
-                }),
-                defaultValue: "{{field}} must be a JSON object",
-              }),
-            );
-            return;
-          }
+        // 格式已在 handleSubmit 前置校验中验证过，此处可以安全解析
+        const otherFields = parseOmoOtherFieldsObject(
+          omoDraft.omoOtherFieldsStr,
+        );
+        if (otherFields) {
           omoConfig.otherFields = otherFields;
-        } catch {
-          toast.error(
-            t("omo.invalidJson", {
-              defaultValue: "Other Fields contains invalid JSON",
-            }),
-          );
-          return;
         }
       }
       settingsConfig = JSON.stringify(omoConfig);
@@ -1129,6 +1196,7 @@ export function ProviderForm({
               ? useGeminiCommonConfigFlag
               : undefined,
       endpointAutoSelect,
+      claudeDesktopMode: undefined,
       // 保存 providerType（用于识别 Copilot / Codex OAuth 等特殊供应商）
       providerType,
       authBinding: isCopilotProvider
@@ -1182,23 +1250,6 @@ export function ProviderForm({
 
     await onSubmit(payload);
   };
-
-  const groupedPresets = useMemo(() => {
-    return presetEntries.reduce<Record<string, PresetEntry[]>>((acc, entry) => {
-      const category = entry.preset.category ?? "others";
-      if (!acc[category]) {
-        acc[category] = [];
-      }
-      acc[category].push(entry);
-      return acc;
-    }, {});
-  }, [presetEntries]);
-
-  const categoryKeys = useMemo(() => {
-    return Object.keys(groupedPresets).filter(
-      (key) => key !== "custom" && groupedPresets[key]?.length,
-    );
-  }, [groupedPresets]);
 
   const shouldShowSpeedTest =
     category !== "official" && category !== "cloud_provider";
@@ -1485,8 +1536,7 @@ export function ProviderForm({
           {!initialData && (
             <ProviderPresetSelector
               selectedPresetId={selectedPresetId}
-              groupedPresets={groupedPresets}
-              categoryKeys={categoryKeys}
+              presetEntries={presetEntries}
               presetCategoryLabels={presetCategoryLabels}
               onPresetChange={handlePresetChange}
               onUniversalPresetSelect={onUniversalPresetSelect}
@@ -1761,11 +1811,15 @@ export function ProviderForm({
               }
               autoSelect={endpointAutoSelect}
               onAutoSelectChange={setEndpointAutoSelect}
+              showEndpointTools
               shouldShowModelSelector={category !== "official"}
               claudeModel={claudeModel}
               defaultHaikuModel={defaultHaikuModel}
+              defaultHaikuModelName={defaultHaikuModelName}
               defaultSonnetModel={defaultSonnetModel}
+              defaultSonnetModelName={defaultSonnetModelName}
               defaultOpusModel={defaultOpusModel}
+              defaultOpusModelName={defaultOpusModelName}
               onModelChange={handleModelChange}
               speedTestEndpoints={speedTestEndpoints}
               apiFormat={localApiFormat}
@@ -2079,7 +2133,10 @@ export function ProviderForm({
               <Button variant="outline" type="button" onClick={onCancel}>
                 {t("common.cancel")}
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting || isConfirmSubmitting}
+              >
                 {submitLabel}
               </Button>
             </div>
@@ -2095,6 +2152,50 @@ export function ProviderForm({
         confirmText={t("confirm.commonConfig.confirm")}
         onConfirm={() => void handleCommonConfigConfirm()}
         onCancel={() => void handleCommonConfigConfirm()}
+      />
+
+      <ConfirmDialog
+        isOpen={softIssues !== null && softIssues.length > 0}
+        variant="info"
+        title={t("providerForm.softValidation.title", {
+          defaultValue: "配置存在以下问题",
+        })}
+        message={
+          (softIssues ?? []).map((issue) => `• ${issue}`).join("\n") +
+          "\n\n" +
+          t("providerForm.softValidation.hint", {
+            defaultValue:
+              "仍要保存吗？保存后切换此供应商时可能失败，可以之后再补全。",
+          })
+        }
+        confirmText={t("providerForm.softValidation.saveAnyway", {
+          defaultValue: "仍要保存",
+        })}
+        cancelText={t("common.cancel")}
+        onConfirm={async () => {
+          if (isConfirmSubmitting) return;
+          const values = pendingFormValues;
+          if (!values) {
+            setSoftIssues(null);
+            return;
+          }
+          setIsConfirmSubmitting(true);
+          try {
+            await performSubmit(values);
+            setSoftIssues(null);
+            setPendingFormValues(null);
+          } catch (error) {
+            console.error("[ProviderForm] soft-confirm submit failed:", error);
+            // 保留确认框和 pending values，让用户可以重试或取消
+          } finally {
+            setIsConfirmSubmitting(false);
+          }
+        }}
+        onCancel={() => {
+          if (isConfirmSubmitting) return;
+          setSoftIssues(null);
+          setPendingFormValues(null);
+        }}
       />
     </>
   );

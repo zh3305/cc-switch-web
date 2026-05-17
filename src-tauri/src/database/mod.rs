@@ -33,6 +33,12 @@ mod tests;
 
 // DAO 类型导出供外部使用
 #[allow(unused_imports)]
+pub(crate) use dao::providers_seed::CLAUDE_DESKTOP_OFFICIAL_PROVIDER_ID;
+pub(crate) use dao::proxy::{
+    validate_cost_multiplier, validate_pricing_source, PRICING_SOURCE_REQUEST,
+    PRICING_SOURCE_RESPONSE,
+};
+#[allow(unused_imports)]
 pub use dao::FailoverQueueItem;
 
 use crate::config::get_app_config_dir;
