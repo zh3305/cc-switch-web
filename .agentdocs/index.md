@@ -18,3 +18,4 @@
 - Web/headless 运行时必须在进程启动早期显式初始化 rustls `CryptoProvider`；上游依赖树可能同时启用 `ring` 与 `aws-lc-rs`，若丢失该初始化会在首次 HTTPS/TLS 请求时 panic。
 - `src-tauri/Cargo.toml` 中 `reqwest` 需保留 `default-features = false` 这个最小分叉，避免 Web/headless 构建重新引入 `native-tls/openssl` 和 `pkg-config` 系统依赖；其余特性尽量跟上游保持一致。
 - 自 2026-05-17 的 `v3.15.0` 同步起，本仓库本地 Rust 验证基线调整为 `1.88.0`：`1.85.0` 已不满足 `image 0.25.10` 与 `time 0.3.47` 的 MSRV，`1.95.0` 会在 `src-tauri/src/proxy/forwarder.rs` 触发 rustc ICE；后续再次同步上游前，优先复用 `1.88.0` 直到重新验证编译器状态。
+- 若需在 WSL/Linux 本地复现 GitHub CI 的默认桌面 `cargo clippy -- -D warnings`，除 Rust 1.88.0 外还需预装 `pkg-config`、`libglib2.0-dev`、`libgtk-3-dev`、`libgdk-pixbuf-2.0-dev`、`libsoup-3.0-dev`、`libjavascriptcoregtk-4.1-dev`、`libwebkit2gtk-4.1-dev`；否则会在 `glib/gdk/libsoup/webkit2gtk` 的 `-sys` crate 阶段提前失败。

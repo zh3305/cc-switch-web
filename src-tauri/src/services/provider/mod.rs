@@ -21,8 +21,10 @@ use crate::settings::CustomEndpoint;
 use crate::store::AppState;
 
 // Re-export sub-module functions for external access
+#[cfg(feature = "desktop")]
+pub use live::import_hermes_providers_from_live;
 pub use live::{
-    import_default_config, import_hermes_providers_from_live, import_openclaw_providers_from_live,
+    import_default_config, import_openclaw_providers_from_live,
     import_opencode_providers_from_live, read_live_settings,
     should_import_default_config_on_startup, sync_current_to_live,
 };

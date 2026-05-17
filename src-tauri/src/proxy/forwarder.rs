@@ -11,8 +11,7 @@ use super::{
     log_codes::fwd as log_fwd,
     provider_router::ProviderRouter,
     providers::{
-        gemini_shadow::GeminiShadowStore, get_adapter, AuthInfo, AuthStrategy, ProviderAdapter,
-        ProviderType,
+        gemini_shadow::GeminiShadowStore, get_adapter, AuthStrategy, ProviderAdapter, ProviderType,
     },
     thinking_budget_rectifier::{rectify_thinking_budget, should_rectify_thinking_budget},
     thinking_rectifier::{
@@ -27,6 +26,8 @@ use crate::commands::{CodexOAuthState, CopilotAuthState};
 use crate::proxy::providers::codex_oauth_auth::CodexOAuthManager;
 #[cfg(feature = "desktop")]
 use crate::proxy::providers::copilot_auth::CopilotAuthManager;
+#[cfg(feature = "desktop")]
+use crate::proxy::providers::AuthInfo;
 use crate::ui_runtime::UiAppHandle;
 use crate::{app_config::AppType, provider::Provider};
 use futures::StreamExt;
@@ -72,6 +73,14 @@ struct ForwardAuthContext {
     auth_headers: Vec<(http::HeaderName, http::HeaderValue)>,
     codex_oauth_session_headers: Vec<(http::HeaderName, http::HeaderValue)>,
 }
+
+type ForwardFuture<'a> = Pin<
+    Box<
+        dyn std::future::Future<Output = Result<(ProxyResponse, Option<String>), ProxyError>>
+            + Send
+            + 'a,
+    >,
+>;
 
 /// 活跃连接 RAII guard
 ///
@@ -947,13 +956,7 @@ impl RequestForwarder {
         headers: &'a axum::http::HeaderMap,
         extensions: &'a Extensions,
         adapter: &'a dyn ProviderAdapter,
-    ) -> Pin<
-        Box<
-            dyn std::future::Future<Output = Result<(ProxyResponse, Option<String>), ProxyError>>
-                + Send
-                + 'a,
-        >,
-    > {
+    ) -> ForwardFuture<'a> {
         Box::pin(async move {
             let prepared = self
                 .prepare_forward_payload(app_type, provider, endpoint, body, headers, adapter)
@@ -1019,7 +1022,10 @@ impl RequestForwarder {
         >,
     > {
         Box::pin(async move {
+            #[cfg(feature = "desktop")]
             let mut base_url = adapter.extract_base_url(provider)?;
+            #[cfg(not(feature = "desktop"))]
+            let base_url = adapter.extract_base_url(provider)?;
             let is_full_url = provider
                 .meta
                 .as_ref()
@@ -1073,9 +1079,7 @@ impl RequestForwarder {
 
                     if dynamic_endpoint != base_url {
                         log::debug!(
-                            "[Copilot] 使用动态 API endpoint: {} (原: {})",
-                            dynamic_endpoint,
-                            base_url
+                            "[Copilot] 使用动态 API endpoint: {dynamic_endpoint} (原: {base_url})"
                         );
                         base_url = dynamic_endpoint;
                     }
@@ -1266,10 +1270,22 @@ impl RequestForwarder {
         Box<dyn std::future::Future<Output = Result<ForwardAuthContext, ProxyError>> + Send + 'a>,
     > {
         Box::pin(async move {
+            #[cfg(feature = "desktop")]
             let mut codex_oauth_account_id: Option<String> = None;
-            let mut should_send_codex_oauth_session_headers = false;
+            #[cfg(not(feature = "desktop"))]
+            let codex_oauth_account_id: Option<String> = None;
 
-            let mut auth_headers = if let Some(mut auth) = adapter.extract_auth(provider) {
+            #[cfg(feature = "desktop")]
+            let mut should_send_codex_oauth_session_headers = false;
+            #[cfg(not(feature = "desktop"))]
+            let should_send_codex_oauth_session_headers = false;
+
+            let mut auth_headers = if let Some(auth) = adapter.extract_auth(provider) {
+                #[cfg(feature = "desktop")]
+                let mut auth = auth;
+                #[cfg(not(feature = "desktop"))]
+                let auth = auth;
+
                 if auth.strategy == AuthStrategy::GitHubCopilot {
                     #[cfg(not(feature = "desktop"))]
                     {
@@ -1902,7 +1918,7 @@ impl RequestForwarder {
         #[cfg(not(feature = "desktop"))]
         {
             let _ = (provider, model_id);
-            return false;
+            false
         }
 
         #[cfg(feature = "desktop")]

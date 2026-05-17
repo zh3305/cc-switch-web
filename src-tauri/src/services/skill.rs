@@ -740,7 +740,7 @@ impl SkillService {
         // 创建 InstalledSkill 记录
         // 计算内容哈希
         let content_hash = Self::compute_dir_hash(&dest).map(Some).unwrap_or_else(|e| {
-            log::warn!("Failed to compute content hash for {}: {e}", install_name);
+            log::warn!("Failed to compute content hash for {install_name}: {e}");
             None
         });
 
@@ -913,11 +913,11 @@ impl SkillService {
             {
                 Ok(Ok(result)) => result,
                 Ok(Err(e)) => {
-                    log::warn!("检查更新时下载 {}/{} 失败: {e}", owner, name);
+                    log::warn!("检查更新时下载 {owner}/{name} 失败: {e}");
                     continue;
                 }
                 Err(_) => {
-                    log::warn!("检查更新时下载 {}/{} 超时", owner, name);
+                    log::warn!("检查更新时下载 {owner}/{name} 超时");
                     continue;
                 }
             };
@@ -1106,7 +1106,7 @@ impl SkillService {
         // 同步到所有已启用的应用目录
         for app in updated_skill.apps.enabled_apps() {
             if let Err(e) = Self::sync_to_app_dir(&updated_skill.directory, &app) {
-                log::warn!("同步更新后的 skill 到 {:?} 失败: {e}", app);
+                log::warn!("同步更新后的 skill 到 {app:?} 失败: {e}");
             }
         }
 
@@ -1941,7 +1941,7 @@ impl SkillService {
         let meta = self.parse_skill_metadata(skill_md)?;
 
         Ok(DiscoverableSkill {
-            key: format!("{}/{}:{}", repo.owner, repo.name, directory),
+            key: format!("{}/{}:{directory}", repo.owner, repo.name),
             name: meta.name.unwrap_or_else(|| directory.to_string()),
             description: meta.description.unwrap_or_default(),
             directory: directory.to_string(),
@@ -2114,8 +2114,7 @@ impl SkillService {
 
         if root.is_dir() && root.join("SKILL.md").exists() {
             log::info!(
-                "Skill directory '{}' not found, but SKILL.md exists at root, using repo root",
-                target_name,
+                "Skill directory '{target_name}' not found, but SKILL.md exists at root, using repo root"
             );
             return Some(root.to_path_buf());
         }
@@ -2780,7 +2779,7 @@ impl SkillService {
                     repo_name: repo.clone(),
                     repo_branch: "main".to_string(),
                     installs: s.installs,
-                    readme_url: Some(format!("https://github.com/{}/{}", owner, repo)),
+                    readme_url: Some(format!("https://github.com/{owner}/{repo}")),
                 })
             })
             .collect();

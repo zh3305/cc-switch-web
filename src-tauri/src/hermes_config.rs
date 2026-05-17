@@ -155,7 +155,7 @@ fn is_top_level_key_line(line: &str) -> bool {
 ///
 /// Returns `(start_byte_inclusive, end_byte_exclusive)` or `None` if not found.
 fn find_yaml_section_range(raw: &str, section_key: &str) -> Option<(usize, usize)> {
-    let target = format!("{}:", section_key);
+    let target = format!("{section_key}:");
     let mut section_start = None;
     let mut offset = 0;
 
@@ -331,11 +331,7 @@ fn write_yaml_section_to_config_locked(
 
     atomic_write(&config_path, new_raw.as_bytes())?;
 
-    log::debug!(
-        "Hermes config section '{}' written to {:?}",
-        section_key,
-        config_path
-    );
+    log::debug!("Hermes config section '{section_key}' written to {config_path:?}");
     Ok(HermesWriteOutcome {
         backup_path: backup_path.map(|p| p.display().to_string()),
     })

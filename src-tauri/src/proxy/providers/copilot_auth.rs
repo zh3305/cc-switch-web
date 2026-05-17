@@ -129,7 +129,7 @@ fn composite_account_id(domain: &str, user_id: u64) -> String {
     if domain == DEFAULT_GITHUB_DOMAIN {
         user_id.to_string()
     } else {
-        format!("{}:{}", domain, user_id)
+        format!("{domain}:{user_id}")
     }
 }
 
@@ -827,7 +827,7 @@ impl CopilotAuthManager {
         // get_api_endpoint() 会回退到 copilot_api_base(&domain)，与之前的静态 URL
         // 拼接结果一致。该回退行为是安全且符合预期的。
         let api_base = self.get_api_endpoint(account_id).await;
-        let models_url = format!("{}/models", api_base);
+        let models_url = format!("{api_base}/models");
 
         log::info!("[CopilotAuth] 获取账号 {account_id} 的 Copilot 可用模型");
 

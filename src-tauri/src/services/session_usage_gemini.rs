@@ -202,7 +202,7 @@ fn sync_single_gemini_file(db: &Database, file_path: &Path) -> Result<(u32, u32)
             Ok(true) => imported += 1,
             Ok(false) => skipped += 1,
             Err(e) => {
-                log::warn!("[GEMINI-SYNC] 插入失败 ({}): {e}", request_id);
+                log::warn!("[GEMINI-SYNC] 插入失败 ({request_id}): {e}");
                 skipped += 1;
             }
         }

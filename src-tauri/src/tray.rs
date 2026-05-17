@@ -232,9 +232,9 @@ fn format_script_summary(result: &crate::provider::UsageResult) -> Option<String
     let plan = first.plan_name.as_deref().unwrap_or("");
     let rounded = pct.round() as i64;
     if plan.is_empty() {
-        Some(format!("{} {}%", emoji, rounded))
+        Some(format!("{emoji} {rounded}%"))
     } else {
-        Some(format!("{} {} {}%", emoji, plan, rounded))
+        Some(format!("{emoji} {plan} {rounded}%"))
     }
 }
 
@@ -529,7 +529,7 @@ pub fn create_tray_menu(
                 }
                 None => section.header_label.to_string(),
             };
-            let submenu_id = format!("submenu_{}", app_type_str);
+            let submenu_id = format!("submenu_{app_type_str}");
 
             // Check if this app is under proxy takeover (for disabling official providers)
             let is_app_taken_over = is_proxy_running
@@ -548,7 +548,7 @@ pub fn create_tray_menu(
                 let is_official_blocked =
                     is_app_taken_over && provider.category.as_deref() == Some("official");
                 let label = if is_official_blocked {
-                    format!("{} \u{26D4}", &provider.name) // ⛔ emoji
+                    format!("{} \u{26D4}", provider.name) // ⛔ emoji
                 } else {
                     provider.name.clone()
                 };

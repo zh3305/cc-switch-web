@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::sync::Arc;
 
 use crate::database::Database;
@@ -40,30 +40,6 @@ pub fn attach_warning(mut value: Value, warning: Option<String>) -> Value {
         }
     }
     value
-}
-
-pub fn success_payload_with_warning(backup_id: String, warning: Option<String>) -> Value {
-    attach_warning(
-        json!({
-            "success": true,
-            "message": "SQL imported successfully",
-            "backupId": backup_id
-        }),
-        warning,
-    )
-}
-
-pub fn import_database_with_sync<F>(db: Arc<Database>, import: F) -> Result<Value, AppError>
-where
-    F: FnOnce(&Database) -> Result<String, AppError>,
-{
-    let db_for_sync = db.clone();
-    let backup_id = import(&db)?;
-    let warning = post_sync_warning_from_result(Ok(run_post_import_sync(db_for_sync)));
-    if let Some(msg) = warning.as_ref() {
-        log::warn!("[Import] post-import sync warning: {msg}");
-    }
-    Ok(success_payload_with_warning(backup_id, warning))
 }
 
 #[cfg(test)]

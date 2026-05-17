@@ -982,7 +982,10 @@ pub fn run() {
                 if !has_omo {
                     match crate::services::OmoService::import_from_local(&app_state, &crate::services::omo::STANDARD) {
                         Ok(provider) => {
-                            log::info!("✓ Imported OMO config from local as provider '{}'", provider.name);
+                            log::info!(
+                                "✓ Imported OMO config from local as provider '{provider_name}'",
+                                provider_name = provider.name
+                            );
                         }
                         Err(AppError::OmoConfigNotFound) => {
                             log::debug!("○ No OMO config to import");
@@ -1119,7 +1122,7 @@ pub fn run() {
 
                     if should_register {
                         if let Err(e) = app.deep_link().register_all() {
-                            log::error!("✗ Failed to register deep link schemes: {}", e);
+                            log::error!("✗ Failed to register deep link schemes: {e}");
                         } else {
                             log::info!("✓ Deep link schemes registered (Linux)");
                         }
@@ -1131,7 +1134,7 @@ pub fn run() {
                 #[cfg(all(debug_assertions, windows))]
                 {
                     if let Err(e) = app.deep_link().register_all() {
-                        log::error!("✗ Failed to register deep link schemes: {}", e);
+                        log::error!("✗ Failed to register deep link schemes: {e}");
                     } else {
                         log::info!("✓ Deep link schemes registered (Windows debug)");
                     }

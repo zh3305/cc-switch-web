@@ -132,7 +132,7 @@ fn sqlite_row_to_session_meta(row: &Value, db_source: &str) -> Option<SessionMet
         .or_else(|| obj.get("updated_at"))
         .and_then(parse_timestamp_to_ms);
 
-    let source_path = format!("{}#{}", db_source, session_id);
+    let source_path = format!("{db_source}#{session_id}");
 
     Some(SessionMeta {
         provider_id: PROVIDER_ID.to_string(),

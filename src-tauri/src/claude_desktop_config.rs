@@ -1094,7 +1094,7 @@ fn proxy_origin_from_parts(listen_address: &str, listen_port: u16) -> String {
         connect_host.to_string()
     };
 
-    format!("http://{}:{}", connect_host_for_url, listen_port)
+    format!("http://{connect_host_for_url}:{listen_port}")
 }
 
 #[cfg(not(any(target_os = "macos", windows)))]

@@ -129,16 +129,26 @@
   通过。
 - `cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --features headless,test-hooks`
   通过；实际运行 `1129` 个 Rust 测试。
+- `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
+  通过；已按 GitHub CI 默认桌面特性在 WSL 下复现并清理本轮同步引入的 `uninlined_format_args` / `unused_mut` / 条件编译相关问题。
+- 提交前再次复验：
+  - `cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --features headless,test-hooks -- --nocapture`
+    再次通过；此前一次整套测试瞬时返回失败、但单独测试项正常，随后完整重跑未复现，最终仍以本次新鲜通过结果作为提交依据。
+  - `corepack pnpm typecheck`
+    通过。
+  - `corepack pnpm test:unit`
+    通过，`41` 个测试文件、`237` 个测试全部通过。
 
 ### 结果说明
 
 - 本地验证期间仍能看到若干 warning，例如未使用代码、Vitest 中故意构造的 error log、Browserslist 数据过旧提示，但都不构成当前同步阻塞。
+- 为复现默认桌面 `clippy`，本轮在 WSL 中补齐了 `pkg-config`、`libglib2.0-dev`、`libgtk-3-dev`、`libgdk-pixbuf-2.0-dev`、`libsoup-3.0-dev`、`libjavascriptcoregtk-4.1-dev`、`libwebkit2gtk-4.1-dev`。
 - 当前没有发现新的编译失败、测试失败或未解决 merge 冲突。
 
 ## 当前状态
 
-- 当前分支：`codex/merge-upstream-20260517`
-- 上游 `v3.15.0` 已完成合并与本地验证
-- 还未推送远程
-- 还未创建新的 Web release tag
-- 下一步只应在你确认后，继续执行推送、发版 tag 或后续 CI/发布动作
+- 当前分支：`main`
+- 上游 `v3.15.0` 已完成合并，且 `main` 已补齐默认桌面 CI/clippy 收口与本地验证
+- 已具备直接提交并推送 `origin/main` 的条件
+- 仍未创建新的 Web release tag
+- 后续如需发版，应在远程 CI 再次确认无误后单独执行

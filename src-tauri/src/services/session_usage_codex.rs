@@ -391,7 +391,7 @@ fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32),
 
                 // 生成唯一 request_id
                 let session_id_str = state.session_id.as_deref().unwrap_or("unknown");
-                let request_id = format!("codex_session:{}:{}", session_id_str, state.event_index);
+                let request_id = format!("codex_session:{session_id_str}:{}", state.event_index);
 
                 // 提取时间戳
                 let timestamp = value
@@ -410,7 +410,7 @@ fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32),
                     Ok(true) => imported += 1,
                     Ok(false) => skipped += 1,
                     Err(e) => {
-                        log::warn!("[CODEX-SYNC] 插入失败 ({}): {e}", request_id);
+                        log::warn!("[CODEX-SYNC] 插入失败 ({request_id}): {e}");
                         skipped += 1;
                     }
                 }

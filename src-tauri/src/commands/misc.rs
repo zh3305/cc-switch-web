@@ -1230,9 +1230,9 @@ exec bash --norc --noprofile
 
     for (terminal, args) in terminals_to_try {
         // Check if terminal exists in common paths
-        let terminal_exists = std::path::Path::new(&format!("/usr/bin/{}", terminal)).exists()
-            || std::path::Path::new(&format!("/bin/{}", terminal)).exists()
-            || std::path::Path::new(&format!("/usr/local/bin/{}", terminal)).exists()
+        let terminal_exists = std::path::Path::new(&format!("/usr/bin/{terminal}")).exists()
+            || std::path::Path::new(&format!("/bin/{terminal}")).exists()
+            || std::path::Path::new(&format!("/usr/local/bin/{terminal}")).exists()
             || which_command(terminal);
 
         if terminal_exists {
@@ -1245,7 +1245,7 @@ exec bash --norc --noprofile
             match result {
                 Ok(_) => return Ok(()),
                 Err(e) => {
-                    last_error = format!("执行 {} 失败: {}", terminal, e);
+                    last_error = format!("执行 {terminal} 失败: {e}");
                 }
             }
         }
@@ -1387,7 +1387,7 @@ fn run_windows_start_command(args: &[&str], terminal_name: &str) -> Result<(), S
         .args(&full_args)
         .creation_flags(CREATE_NO_WINDOW)
         .output()
-        .map_err(|e| format!("启动 {} 失败: {e}", terminal_name))?;
+        .map_err(|e| format!("启动 {terminal_name} 失败: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -1414,7 +1414,7 @@ pub(crate) fn launch_terminal_running(command_line: &str, label: &str) -> Result
 
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     let (script_file, script_content) = {
-        let file = temp_dir.join(format!("cc_switch_{}_{}.sh", label, pid));
+        let file = temp_dir.join(format!("cc_switch_{label}_{pid}.sh"));
         let content = format!(
             r#"#!/bin/bash
 trap 'rm -f "{script_path}"' EXIT
@@ -1513,7 +1513,7 @@ read -n 1 -s
             let terminal_exists = which_command(terminal)
                 || ["/usr/bin", "/bin", "/usr/local/bin"]
                     .iter()
-                    .any(|dir| std::path::Path::new(&format!("{}/{}", dir, terminal)).exists());
+                    .any(|dir| std::path::Path::new(&format!("{dir}/{terminal}")).exists());
 
             if terminal_exists {
                 let spawn_result = Command::new(terminal)
@@ -1524,7 +1524,7 @@ read -n 1 -s
                 match spawn_result {
                     Ok(_) => return Ok(()),
                     Err(e) => {
-                        last_error = format!("执行 {} 失败: {}", terminal, e);
+                        last_error = format!("执行 {terminal} 失败: {e}");
                     }
                 }
             }
@@ -1539,7 +1539,7 @@ read -n 1 -s
         let preferred = crate::settings::get_preferred_terminal();
         let terminal = preferred.as_deref().unwrap_or("cmd");
 
-        let bat_file = temp_dir.join(format!("cc_switch_{}_{}.bat", label, pid));
+        let bat_file = temp_dir.join(format!("cc_switch_{label}_{pid}.bat"));
         let content = format!(
             "@echo off\r\necho [cc-switch] Starting: {cmd}\r\necho.\r\n{cmd}\r\necho.\r\necho [cc-switch] Command exited. Press any key to close.\r\npause >nul\r\ndel \"%~f0\" >nul 2>&1\r\n",
             cmd = command_line,

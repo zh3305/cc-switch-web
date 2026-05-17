@@ -621,10 +621,11 @@ fn window_seconds_to_tier_name(secs: i64) -> String {
         604800 => "seven_day".to_string(),
         s => {
             let hours = s / 3600;
+            let days = hours / 24;
             if hours >= 24 {
-                format!("{}_day", hours / 24)
+                format!("{days}_day")
             } else {
-                format!("{}_hour", hours)
+                format!("{hours}_hour")
             }
         }
     }
