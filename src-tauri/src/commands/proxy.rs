@@ -15,6 +15,24 @@ pub async fn start_proxy_server(
     state.proxy_service.start().await
 }
 
+/// 停止代理服务器（仅停止服务，不恢复/清理 Live 接管状态）
+#[tauri::command]
+pub async fn stop_proxy_server(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let takeover = state.proxy_service.get_takeover_status().await?;
+    if takeover.claude
+        || takeover.codex
+        || takeover.gemini
+        || takeover.opencode
+        || takeover.openclaw
+    {
+        return Err(
+            "仍有应用处于代理接管状态，请先在设置中关闭对应应用接管后再停止本地路由。".to_string(),
+        );
+    }
+
+    state.proxy_service.stop().await
+}
+
 /// 停止代理服务器（恢复 Live 配置）
 #[tauri::command]
 pub async fn stop_proxy_with_restore(state: tauri::State<'_, AppState>) -> Result<(), String> {
@@ -115,9 +133,17 @@ pub async fn update_proxy_config_for_app(
     config: AppProxyConfig,
 ) -> Result<(), String> {
     let db = &state.db;
+    let app_type = config.app_type.clone();
+    let circuit_config = CircuitBreakerConfig::from(&config);
+
     db.update_proxy_config_for_app(config)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    state
+        .proxy_service
+        .update_circuit_breaker_config_for_app(&app_type, circuit_config)
+        .await
 }
 
 async fn get_default_cost_multiplier_internal(
@@ -128,6 +154,7 @@ async fn get_default_cost_multiplier_internal(
     db.get_default_cost_multiplier(app_type).await
 }
 
+#[cfg(any(feature = "desktop", feature = "test-hooks"))]
 #[cfg_attr(not(feature = "test-hooks"), doc(hidden))]
 pub async fn get_default_cost_multiplier_test_hook(
     state: &AppState,
@@ -156,6 +183,7 @@ async fn set_default_cost_multiplier_internal(
     db.set_default_cost_multiplier(app_type, value).await
 }
 
+#[cfg(any(feature = "desktop", feature = "test-hooks"))]
 #[cfg_attr(not(feature = "test-hooks"), doc(hidden))]
 pub async fn set_default_cost_multiplier_test_hook(
     state: &AppState,
@@ -185,6 +213,7 @@ async fn get_pricing_model_source_internal(
     db.get_pricing_model_source(app_type).await
 }
 
+#[cfg(any(feature = "desktop", feature = "test-hooks"))]
 #[cfg_attr(not(feature = "test-hooks"), doc(hidden))]
 pub async fn get_pricing_model_source_test_hook(
     state: &AppState,
@@ -213,6 +242,7 @@ async fn set_pricing_model_source_internal(
     db.set_pricing_model_source(app_type, value).await
 }
 
+#[cfg(any(feature = "desktop", feature = "test-hooks"))]
 #[cfg_attr(not(feature = "test-hooks"), doc(hidden))]
 pub async fn set_pricing_model_source_test_hook(
     state: &AppState,
