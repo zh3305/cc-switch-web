@@ -827,12 +827,11 @@ impl RequestForwarder {
 
                             {
                                 let mut status = self.status.write().await;
-                                status.last_error =
-                                    Some(format!(
-                                        "Provider {provider_name} 失败: {err}",
-                                        provider_name = provider.name,
-                                        err = e
-                                    ));
+                                status.last_error = Some(format!(
+                                    "Provider {provider_name} 失败: {err}",
+                                    provider_name = provider.name,
+                                    err = e
+                                ));
                             }
 
                             let (log_code, log_message) = build_retryable_failure_log(
@@ -1019,7 +1018,8 @@ impl RequestForwarder {
                     "[Copilot] Warmup 请求降级到模型: {warmup_model}",
                     warmup_model = self.copilot_optimizer_config.warmup_model
                 );
-                mapped_body["model"] = serde_json::json!(&self.copilot_optimizer_config.warmup_model);
+                mapped_body["model"] =
+                    serde_json::json!(&self.copilot_optimizer_config.warmup_model);
             }
 
             // 预计算确定性 Request ID（在 body 被 move 之前）
@@ -1304,7 +1304,8 @@ impl RequestForwarder {
                             };
                             log::debug!(
                                 "[CodexOAuth] 成功获取 access_token (account={account_label})",
-                                account_label = codex_oauth_account_id.as_deref().unwrap_or("default")
+                                account_label =
+                                    codex_oauth_account_id.as_deref().unwrap_or("default")
                             );
                         }
                         Err(e) => {
