@@ -1,7 +1,7 @@
 import { Suspense, type ComponentType } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, waitFor, fireEvent, cleanup } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { providersApi } from "@/lib/api/providers";
 import {
   resetProviderState,
@@ -10,6 +10,7 @@ import {
   setProviders,
 } from "../msw/state";
 import { emitTauriEvent } from "../msw/tauriMocks";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
@@ -21,16 +22,18 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("@/contexts/AuthContext", () => ({
-  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useAuth: () => ({
-    isLoading: false,
-    isAuthenticated: true,
-    authEnabled: false,
-    error: null,
-    login: vi.fn(),
-  }),
-}));
+vi.mock("@/lib/api", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
+  return {
+    ...actual,
+    authApi: {
+      checkStatus: vi.fn().mockResolvedValue({ enabled: false }),
+      checkSession: vi.fn().mockResolvedValue({ valid: true }),
+      login: vi.fn().mockResolvedValue(true),
+      logout: vi.fn().mockResolvedValue(undefined),
+    },
+  };
+});
 
 vi.mock("@/components/providers/ProviderList", () => ({
   ProviderList: ({
@@ -156,84 +159,21 @@ vi.mock("@/components/mcp/McpPanel", () => ({
     ),
 }));
 
-vi.mock("@/components/settings/SettingsPage", () => ({
-  SettingsPage: () => <div data-testid="settings-page" />,
-}));
-
-vi.mock("@/components/prompts/PromptPanel", () => ({
-  default: () => <div data-testid="prompt-panel" />,
-}));
-
-vi.mock("@/components/skills/UnifiedSkillsPanel", () => ({
-  default: () => <div data-testid="unified-skills-panel" />,
-}));
-
-vi.mock("@/components/skills/SkillsPage", () => ({
-  SkillsPage: () => <div data-testid="skills-page" />,
-}));
-
-vi.mock("@/components/mcp/UnifiedMcpPanel", () => ({
-  default: () => <div data-testid="unified-mcp-panel" />,
-}));
-
-vi.mock("@/components/agents/AgentsPanel", () => ({
-  AgentsPanel: () => <div data-testid="agents-panel" />,
-}));
-
-vi.mock("@/components/universal", () => ({
-  UniversalProviderPanel: () => <div data-testid="universal-provider-panel" />,
-}));
-
-vi.mock("@/components/sessions/SessionManagerPage", () => ({
-  SessionManagerPage: () => <div data-testid="session-manager-page" />,
-}));
-
-vi.mock("@/components/workspace/WorkspaceFilesPanel", () => ({
-  default: () => <div data-testid="workspace-files-panel" />,
-}));
-
-vi.mock("@/components/openclaw/EnvPanel", () => ({
-  default: () => <div data-testid="openclaw-env-panel" />,
-}));
-
-vi.mock("@/components/openclaw/ToolsPanel", () => ({
-  default: () => <div data-testid="openclaw-tools-panel" />,
-}));
-
-vi.mock("@/components/openclaw/AgentsDefaultsPanel", () => ({
-  default: () => <div data-testid="openclaw-agents-panel" />,
-}));
-
-vi.mock("@/components/openclaw/OpenClawHealthBanner", () => ({
-  default: () => null,
-}));
-
-vi.mock("@/components/DeepLinkImportDialog", () => ({
-  DeepLinkImportDialog: () => null,
-}));
-
-vi.mock("@/components/FirstRunNoticeDialog", () => ({
-  FirstRunNoticeDialog: () => null,
-}));
-
-vi.mock("@/components/LoginPage", () => ({
-  LoginPage: () => <div data-testid="login-page" />,
-}));
-
-const renderApp = (AppComponent: ComponentType) => {
+const renderApp = async (AppComponent: ComponentType) => {
   const client = new QueryClient();
-  return render(
+  render(
     <QueryClientProvider client={client}>
-      <Suspense fallback={<div data-testid="loading">loading</div>}>
-        <AppComponent />
-      </Suspense>
+      <AuthProvider>
+        <Suspense fallback={<div data-testid="loading">loading</div>}>
+          <AppComponent />
+        </Suspense>
+      </AuthProvider>
     </QueryClientProvider>,
   );
-};
-
-const getLatestProviderList = () => {
-  const lists = screen.getAllByTestId("provider-list");
-  return lists[lists.length - 1]!;
+  // Wait for AuthProvider's async initAuth to resolve
+  await waitFor(() =>
+    expect(screen.queryByText("Checking authentication...")).not.toBeInTheDocument(),
+  );
 };
 
 describe("App integration with MSW", () => {
@@ -243,188 +183,181 @@ describe("App integration with MSW", () => {
     toastErrorMock.mockReset();
   });
 
-  it(
-    "covers basic provider flows via real hooks",
-    async () => {
-      const { default: App } = await import("@/App");
-      renderApp(App);
+  afterEach(() => {
+    cleanup();
+  });
 
-      await waitFor(() =>
-        expect(getLatestProviderList().textContent).toContain(
-          "claude-1",
-        ),
-      );
+  it("covers basic provider flows via real hooks", async () => {
+    const { default: App } = await import("@/App");
+    await renderApp(App);
 
-      fireEvent.click(screen.getByText("switch-codex"));
-      await waitFor(() =>
-        expect(getLatestProviderList().textContent).toContain(
-          "codex-1",
-        ),
-      );
+    await waitFor(() =>
+      expect(screen.getByTestId("provider-list").textContent).toContain(
+        "claude-1",
+      ),
+    );
 
-      fireEvent.click(screen.getByText("usage"));
-      expect(screen.getByTestId("usage-modal")).toBeInTheDocument();
-      fireEvent.click(screen.getByText("save-script"));
-      fireEvent.click(screen.getByText("close-usage"));
+    fireEvent.click(screen.getByText("switch-codex"));
+    await waitFor(() =>
+      expect(screen.getByTestId("provider-list").textContent).toContain(
+        "codex-1",
+      ),
+    );
 
-      fireEvent.click(screen.getByText("create"));
-      expect(screen.getByTestId("add-provider-dialog")).toBeInTheDocument();
-      fireEvent.click(screen.getByText("confirm-add"));
-      await waitFor(() =>
-        expect(getLatestProviderList().textContent).toMatch(
-          /New codex Provider/,
-        ),
-      );
+    fireEvent.click(screen.getByText("usage"));
+    expect(screen.getByTestId("usage-modal")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("save-script"));
+    fireEvent.click(screen.getByText("close-usage"));
 
-      fireEvent.click(screen.getByText("edit"));
-      expect(screen.getByTestId("edit-provider-dialog")).toBeInTheDocument();
-      fireEvent.click(screen.getByText("confirm-edit"));
-      await waitFor(() =>
-        expect(getLatestProviderList().textContent).toMatch(
-          /-edited/,
-        ),
-      );
+    fireEvent.click(screen.getByText("create"));
+    expect(screen.getByTestId("add-provider-dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("confirm-add"));
+    await waitFor(() =>
+      expect(screen.getByTestId("provider-list").textContent).toMatch(
+        /New codex Provider/,
+      ),
+    );
 
-      fireEvent.click(screen.getByText("switch"));
-      fireEvent.click(screen.getByText("duplicate"));
-      await waitFor(() =>
-        expect(getLatestProviderList().textContent).toMatch(/copy/),
-      );
+    fireEvent.click(screen.getByText("edit"));
+    expect(screen.getByTestId("edit-provider-dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("confirm-edit"));
+    await waitFor(() =>
+      expect(screen.getByTestId("provider-list").textContent).toMatch(
+        /-edited/,
+      ),
+    );
 
-      fireEvent.click(screen.getByText("open-website"));
+    fireEvent.click(screen.getByText("switch"));
+    fireEvent.click(screen.getByText("duplicate"));
+    await waitFor(() =>
+      expect(screen.getByTestId("provider-list").textContent).toMatch(/copy/),
+    );
 
-      emitTauriEvent("provider-switched", {
-        appType: "codex",
-        providerId: "codex-2",
-      });
+    fireEvent.click(screen.getByText("open-website"));
 
-      expect(toastErrorMock).not.toHaveBeenCalled();
-      expect(toastSuccessMock).toHaveBeenCalled();
-    },
-    90000,
-  );
+    emitTauriEvent("provider-switched", {
+      appType: "codex",
+      providerId: "codex-2",
+    });
 
-  it(
-    "shows toast when auto sync fails in background",
-    async () => {
-      const { default: App } = await import("@/App");
-      renderApp(App);
+    expect(toastErrorMock).not.toHaveBeenCalled();
+    expect(toastSuccessMock).toHaveBeenCalled();
+  });
 
-      await waitFor(() =>
-        expect(getLatestProviderList().textContent).toContain(
-          "claude-1",
-        ),
-      );
+  it("shows toast when auto sync fails in background", async () => {
+    const { default: App } = await import("@/App");
+    await renderApp(App);
 
-      emitTauriEvent("webdav-sync-status-updated", {
-        source: "auto",
-        status: "error",
-        error: "network timeout",
-      });
+    await waitFor(() =>
+      expect(screen.getByTestId("provider-list").textContent).toContain(
+        "claude-1",
+      ),
+    );
 
-      await waitFor(() => {
-        expect(toastErrorMock).toHaveBeenCalled();
-      });
-    },
-    90000,
-  );
+    expect(() => {
+      emitTauriEvent("webdav-sync-status-updated", null);
+    }).not.toThrow();
+    expect(toastErrorMock).not.toHaveBeenCalled();
 
-  it(
-    "duplicates openclaw providers with a generated key that avoids live-only ids",
-    async () => {
-      setProviders("openclaw", {
-        deepseek: {
-          id: "deepseek",
-          name: "DeepSeek",
-          settingsConfig: {
-            baseUrl: "https://api.deepseek.com",
-            apiKey: "test-key",
-            api: "openai-completions",
-            models: [],
-          },
-          category: "custom",
-          sortIndex: 0,
-          createdAt: Date.now(),
+    emitTauriEvent("webdav-sync-status-updated", {
+      source: "auto",
+      status: "error",
+      error: "network timeout",
+    });
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalled();
+    });
+  });
+
+  it("duplicates openclaw providers with a generated key that avoids live-only ids", async () => {
+    setProviders("openclaw", {
+      deepseek: {
+        id: "deepseek",
+        name: "DeepSeek",
+        settingsConfig: {
+          baseUrl: "https://api.deepseek.com",
+          apiKey: "test-key",
+          api: "openai-completions",
+          models: [],
         },
-      });
-      setCurrentProviderId("openclaw", "deepseek");
-      setLiveProviderIds("openclaw", ["deepseek-copy"]);
+        category: "custom",
+        sortIndex: 0,
+        createdAt: Date.now(),
+      },
+    });
+    setCurrentProviderId("openclaw", "deepseek");
+    setLiveProviderIds("openclaw", ["deepseek-copy"]);
 
-      const { default: App } = await import("@/App");
-      renderApp(App);
+    const { default: App } = await import("@/App");
+    await renderApp(App);
 
-      fireEvent.click(screen.getAllByText("switch-openclaw")[0]!);
+    fireEvent.click(screen.getAllByText("switch-openclaw")[0]!);
 
-      await waitFor(() =>
-        expect(getLatestProviderList().textContent).toContain(
-          "deepseek",
-        ),
-      );
+    await waitFor(() =>
+      expect(screen.getByTestId("provider-list").textContent).toContain(
+        "deepseek",
+      ),
+    );
 
-      fireEvent.click(screen.getByText("duplicate"));
+    fireEvent.click(screen.getByText("duplicate"));
 
-      await waitFor(() => {
-        const providerList = getLatestProviderList().textContent;
-        expect(providerList).toContain("deepseek-copy-2");
-        expect(providerList).toContain("DeepSeek copy");
-      });
+    await waitFor(() => {
+      const providerList = screen.getByTestId("provider-list").textContent;
+      expect(providerList).toContain("deepseek-copy-2");
+      expect(providerList).toContain("DeepSeek copy");
+    });
 
-      expect(toastErrorMock).not.toHaveBeenCalledWith(
-        expect.stringContaining("Provider key is required for openclaw"),
-      );
-    },
-    60000,
-  );
+    expect(toastErrorMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("Provider key is required for openclaw"),
+    );
+  });
 
-  it(
-    "shows toast when duplicate cannot load live provider ids",
-    async () => {
-      setProviders("openclaw", {
-        deepseek: {
-          id: "deepseek",
-          name: "DeepSeek",
-          settingsConfig: {
-            baseUrl: "https://api.deepseek.com",
-            apiKey: "test-key",
-            api: "openai-completions",
-            models: [],
-          },
-          category: "custom",
-          sortIndex: 0,
-          createdAt: Date.now(),
+  it("shows toast when duplicate cannot load live provider ids", async () => {
+    setProviders("openclaw", {
+      deepseek: {
+        id: "deepseek",
+        name: "DeepSeek",
+        settingsConfig: {
+          baseUrl: "https://api.deepseek.com",
+          apiKey: "test-key",
+          api: "openai-completions",
+          models: [],
         },
-      });
-      setCurrentProviderId("openclaw", "deepseek");
+        category: "custom",
+        sortIndex: 0,
+        createdAt: Date.now(),
+      },
+    });
+    setCurrentProviderId("openclaw", "deepseek");
 
-      const liveIdsSpy = vi
-        .spyOn(providersApi, "getOpenClawLiveProviderIds")
-        .mockRejectedValueOnce(new Error("broken config"));
+    const liveIdsSpy = vi
+      .spyOn(providersApi, "getOpenClawLiveProviderIds")
+      .mockRejectedValueOnce(new Error("broken config"));
 
-      const { default: App } = await import("@/App");
-      renderApp(App);
+    const { default: App } = await import("@/App");
+    await renderApp(App);
 
-      fireEvent.click(screen.getAllByText("switch-openclaw")[0]!);
+    fireEvent.click(screen.getAllByText("switch-openclaw")[0]!);
 
-      await waitFor(() =>
-        expect(getLatestProviderList().textContent).toContain(
-          "deepseek",
-        ),
+    await waitFor(() =>
+      expect(screen.getByTestId("provider-list").textContent).toContain(
+        "deepseek",
+      ),
+    );
+
+    fireEvent.click(screen.getByText("duplicate"));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        expect.stringContaining("读取配置中的供应商标识失败"),
       );
+    });
 
-      fireEvent.click(screen.getByText("duplicate"));
+    expect(screen.getByTestId("provider-list").textContent).not.toContain(
+      "deepseek-copy",
+    );
 
-      await waitFor(() => {
-        expect(toastErrorMock).toHaveBeenCalledWith(
-          expect.stringContaining("读取配置中的供应商标识失败"),
-        );
-      });
-
-      expect(getLatestProviderList().textContent).not.toContain(
-        "deepseek-copy",
-      );
-
-      liveIdsSpy.mockRestore();
-    },
-    60000,
-  );
+    liveIdsSpy.mockRestore();
+  });
 });

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { invoke, listen } from "@/lib/transport";
+import { invoke } from "@/lib/transport";
 import {
   Plus,
   Settings,
@@ -45,9 +45,11 @@ import { hermesApi } from "@/lib/api/hermes";
 import { useProxyStatus } from "@/hooks/useProxyStatus";
 import { useAutoCompact } from "@/hooks/useAutoCompact";
 import { useUsageCacheBridge } from "@/hooks/useUsageCacheBridge";
+import { useTauriEvent } from "@/hooks/useTauriEvent";
 import { useLastValidValue } from "@/hooks/useLastValidValue";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import { isTextEditableTarget } from "@/utils/domUtils";
+import { deepClone } from "@/utils/deepClone";
 import { cn } from "@/lib/utils";
 import {
   isWindows,
@@ -335,74 +337,15 @@ function App() {
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
-
-    const setupListener = async () => {
-      try {
-        unsubscribe = await providersApi.onSwitched(
-          async (event: ProviderSwitchEvent) => {
-            if (event.appType === activeApp) {
-              await refetch();
-            }
-          },
-        );
-      } catch (error) {
-        console.error("[App] Failed to subscribe provider switch event", error);
-      }
-    };
-
-    setupListener();
-    return () => {
-      unsubscribe?.();
-    };
-  }, [activeApp, refetch]);
-
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-
-    const setupListener = async () => {
-      try {
-        unsubscribe = await listen("universal-provider-synced", async () => {
-          await queryClient.invalidateQueries({ queryKey: ["providers"] });
-          try {
-            await providersApi.updateTrayMenu();
-          } catch (error) {
-            console.error("[App] Failed to update tray menu", error);
-          }
-        });
-      } catch (error) {
-        console.error(
-          "[App] Failed to subscribe universal-provider-synced event",
-          error,
-        );
-      }
-    };
-
-    setupListener();
-    return () => {
-      unsubscribe?.();
-    };
-  }, [queryClient]);
-
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
     let active = true;
 
     const setupListener = async () => {
       try {
-        const off = await listen<WebDavSyncStatusUpdatedPayload>(
-          "webdav-sync-status-updated",
-          async (payload) => {
-            await queryClient.invalidateQueries({ queryKey: ["settings"] });
-
-            if (payload.source !== "auto" || payload.status !== "error") {
-              return;
+        const off = await providersApi.onSwitched(
+          async (event: ProviderSwitchEvent) => {
+            if (event.appType === activeApp) {
+              await refetch();
             }
-
-            toast.error(
-              t("settings.webdavSync.autoSyncFailedToast", {
-                error: payload.error || t("common.unknown"),
-              }),
-            );
           },
         );
         if (!active) {
@@ -411,10 +354,7 @@ function App() {
         }
         unsubscribe = off;
       } catch (error) {
-        console.error(
-          "[App] Failed to subscribe webdav-sync-status-updated event",
-          error,
-        );
+        console.error("[App] Failed to subscribe provider switch event", error);
       }
     };
 
@@ -423,33 +363,45 @@ function App() {
       active = false;
       unsubscribe?.();
     };
-  }, [queryClient, t]);
+  }, [activeApp, refetch]);
 
-  // Listen for proxy-official-warning: warn when takeover is enabled with an official provider
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
+  useTauriEvent("universal-provider-synced", async () => {
+    await queryClient.invalidateQueries({ queryKey: ["providers"] });
+    try {
+      await providersApi.updateTrayMenu();
+    } catch (error) {
+      console.error("[App] Failed to update tray menu", error);
+    }
+  });
 
-    const setup = async () => {
-      unsubscribe = await listen<{
-        appType: string;
-        providerName: string;
-      }>("proxy-official-warning", (event) => {
-        const { providerName } = event;
-        toast.warning(
-          t("notifications.proxyOfficialWarning", {
-            name: providerName,
-            defaultValue: `当前供应商 ${providerName} 是官方供应商，建议切换到第三方供应商后再使用代理接管`,
-          }),
-          { duration: 8000 },
-        );
-      });
-    };
+  useTauriEvent<WebDavSyncStatusUpdatedPayload | null | undefined>(
+    "webdav-sync-status-updated",
+    async (payload) => {
+      const statusPayload = payload ?? {};
+      await queryClient.invalidateQueries({ queryKey: ["settings"] });
+      if (statusPayload.source !== "auto" || statusPayload.status !== "error") {
+        return;
+      }
+      toast.error(
+        t("settings.webdavSync.autoSyncFailedToast", {
+          error: statusPayload.error || t("common.unknown"),
+        }),
+      );
+    },
+  );
 
-    void setup();
-    return () => {
-      unsubscribe?.();
-    };
-  }, [t]);
+  useTauriEvent<{ appType: string; providerName: string }>(
+    "proxy-official-warning",
+    (payload) => {
+      toast.warning(
+        t("notifications.proxyOfficialWarning", {
+          name: payload.providerName,
+          defaultValue: `当前供应商 ${payload.providerName} 是官方供应商，建议切换到第三方供应商后再使用代理接管`,
+        }),
+        { duration: 8000 },
+      );
+    },
+  );
 
   useEffect(() => {
     let active = true;
@@ -722,13 +674,11 @@ function App() {
       addToLive?: boolean;
     } = {
       name: `${provider.name} copy`,
-      settingsConfig: JSON.parse(JSON.stringify(provider.settingsConfig)), // 深拷贝
+      settingsConfig: deepClone(provider.settingsConfig),
       websiteUrl: provider.websiteUrl,
       category: provider.category,
       sortIndex: newSortIndex, // 复制原 sortIndex + 1
-      meta: provider.meta
-        ? JSON.parse(JSON.stringify(provider.meta))
-        : undefined, // 深拷贝
+      meta: provider.meta ? deepClone(provider.meta) : undefined,
       icon: provider.icon,
       iconColor: provider.iconColor,
     };
@@ -1605,7 +1555,7 @@ function App() {
         }}
         onSubmit={handleEditProvider}
         appId={activeApp}
-        isProxyTakeover={isProxyRunning && isCurrentAppTakeoverActive}
+        isProxyTakeover={isCurrentAppTakeoverActive}
       />
 
       {effectiveUsageProvider && (
