@@ -18,7 +18,6 @@ use super::{
     ProxyError,
 };
 use crate::database::Database;
-use tauri::AppHandle;
 use axum::{
     extract::DefaultBodyLimit,
     routing::{any, get, post},
@@ -27,6 +26,7 @@ use axum::{
 use hyper_util::rt::TokioIo;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tauri::AppHandle;
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
 

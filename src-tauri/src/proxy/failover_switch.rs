@@ -7,11 +7,11 @@
 
 use crate::database::Database;
 use crate::error::AppError;
-use tauri::AppHandle;
 use std::collections::HashSet;
 #[cfg(not(feature = "desktop"))]
 use std::str::FromStr;
 use std::sync::Arc;
+use tauri::AppHandle;
 #[cfg(feature = "desktop")]
 use tauri::{Emitter, Manager};
 use tokio::sync::RwLock;
