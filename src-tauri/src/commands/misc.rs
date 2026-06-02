@@ -8,7 +8,6 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-#[cfg(feature = "desktop")]
 use std::str::FromStr;
 #[cfg(feature = "desktop")]
 use tauri::AppHandle;
@@ -184,6 +183,7 @@ pub async fn get_tool_versions(
     Ok(results)
 }
 
+#[cfg(feature = "desktop")]
 #[tauri::command]
 pub async fn run_tool_lifecycle_action(
     tools: Vec<String>,
@@ -2317,6 +2317,7 @@ pub struct ToolInstallationReport {
 /// 探测各工具的安装分布：枚举所有安装、标记冲突、生成锚定升级命令。只读、无副作用。
 /// 诊断按钮、升级前确认、升级后补诊共用此命令，各取所需字段——避免对同一份枚举结果
 /// 散落多套下游判定。
+#[cfg(feature = "desktop")]
 #[tauri::command]
 pub async fn probe_tool_installations(
     tools: Vec<String>,

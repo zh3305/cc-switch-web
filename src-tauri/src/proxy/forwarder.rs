@@ -29,6 +29,7 @@ use futures::StreamExt;
 use http::Extensions;
 use serde_json::Value;
 use std::sync::Arc;
+#[cfg(feature = "desktop")]
 use tauri::Manager;
 use tokio::sync::RwLock;
 
