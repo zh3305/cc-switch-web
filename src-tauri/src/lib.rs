@@ -36,7 +36,6 @@ mod settings;
 mod store;
 #[cfg(feature = "desktop")]
 mod tray;
-mod ui_runtime;
 mod usage_events;
 mod usage_script;
 
