@@ -27,7 +27,6 @@ use axum::{
 use hyper_util::rt::TokioIo;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tauri::AppHandle;
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
 

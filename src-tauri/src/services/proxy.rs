@@ -12,10 +12,10 @@ use crate::proxy::types::*;
 use crate::services::provider::{
     build_effective_settings_with_common_config, write_live_with_common_config,
 };
+use crate::ui_runtime::UiAppHandle;
 use serde_json::{json, Map, Value};
 use std::str::FromStr;
 use std::sync::Arc;
-use tauri::AppHandle;
 #[cfg(feature = "desktop")]
 use tauri::Emitter;
 use tokio::sync::RwLock;

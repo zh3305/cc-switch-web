@@ -71,7 +71,7 @@ mod desktop_impl {
 }
 
 #[cfg(feature = "desktop")]
-pub use desktop_impl::{init, notify_log_recorded, EVENT_USAGE_LOG_RECORDED};
+pub use desktop_impl::{init, notify_log_recorded};
 
 #[cfg(not(feature = "desktop"))]
 pub fn notify_log_recorded() {}
