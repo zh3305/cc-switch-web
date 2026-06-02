@@ -58,7 +58,7 @@ pub struct ProxyService {
     db: Arc<Database>,
     server: Arc<RwLock<Option<ProxyServer>>>,
     /// AppHandle，用于传递给 ProxyServer 以支持故障转移时的 UI 更新
-    app_handle: Arc<RwLock<Option<AppHandle>>>,
+    app_handle: Arc<RwLock<Option<UiAppHandle>>>,
     switch_locks: SwitchLockManager,
 }
 
@@ -385,7 +385,7 @@ impl ProxyService {
     }
 
     /// 设置 AppHandle（在应用初始化时调用）
-    pub fn set_app_handle(&self, handle: AppHandle) {
+    pub fn set_app_handle(&self, handle: UiAppHandle) {
         futures::executor::block_on(async {
             *self.app_handle.write().await = Some(handle);
         });

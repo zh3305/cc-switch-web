@@ -7,6 +7,7 @@
 
 use crate::database::Database;
 use crate::error::AppError;
+use crate::ui_runtime::UiAppHandle;
 use std::collections::HashSet;
 #[cfg(not(feature = "desktop"))]
 use std::str::FromStr;
@@ -44,7 +45,7 @@ impl FailoverSwitchManager {
     /// - `Err(e)` - 切换过程中发生错误
     pub async fn try_switch(
         &self,
-        app_handle: Option<&AppHandle>,
+        app_handle: Option<&UiAppHandle>,
         app_type: &str,
         provider_id: &str,
         provider_name: &str,
@@ -77,7 +78,7 @@ impl FailoverSwitchManager {
 
     async fn do_switch(
         &self,
-        app_handle: Option<&AppHandle>,
+        app_handle: Option<&UiAppHandle>,
         app_type: &str,
         provider_id: &str,
         provider_name: &str,
