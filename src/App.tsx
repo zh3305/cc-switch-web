@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { invoke } from "@tauri-apps/api/core";
 import { useQueryClient } from "@tanstack/react-query";
-import { invoke, listen } from "@/lib/transport";
+import { invoke } from "@/lib/transport";
 import {
   Plus,
   Settings,

@@ -1,7 +1,7 @@
 import { Suspense, type ComponentType } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, waitFor, fireEvent, cleanup } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { providersApi } from "@/lib/api/providers";
 import {
   resetProviderState,
@@ -10,6 +10,7 @@ import {
   setProviders,
 } from "../msw/state";
 import { emitTauriEvent } from "../msw/tauriMocks";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
@@ -20,6 +21,19 @@ vi.mock("sonner", () => ({
     error: (...args: unknown[]) => toastErrorMock(...args),
   },
 }));
+
+vi.mock("@/lib/api", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
+  return {
+    ...actual,
+    authApi: {
+      checkStatus: vi.fn().mockResolvedValue({ enabled: false }),
+      checkSession: vi.fn().mockResolvedValue({ valid: true }),
+      login: vi.fn().mockResolvedValue(true),
+      logout: vi.fn().mockResolvedValue(undefined),
+    },
+  };
+});
 
 vi.mock("@/components/providers/ProviderList", () => ({
   ProviderList: ({
@@ -145,14 +159,20 @@ vi.mock("@/components/mcp/McpPanel", () => ({
     ),
 }));
 
-const renderApp = (AppComponent: ComponentType) => {
+const renderApp = async (AppComponent: ComponentType) => {
   const client = new QueryClient();
-  return render(
+  render(
     <QueryClientProvider client={client}>
-      <Suspense fallback={<div data-testid="loading">loading</div>}>
-        <AppComponent />
-      </Suspense>
+      <AuthProvider>
+        <Suspense fallback={<div data-testid="loading">loading</div>}>
+          <AppComponent />
+        </Suspense>
+      </AuthProvider>
     </QueryClientProvider>,
+  );
+  // Wait for AuthProvider's async initAuth to resolve
+  await waitFor(() =>
+    expect(screen.queryByText("Checking authentication...")).not.toBeInTheDocument(),
   );
 };
 
@@ -163,9 +183,13 @@ describe("App integration with MSW", () => {
     toastErrorMock.mockReset();
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it("covers basic provider flows via real hooks", async () => {
     const { default: App } = await import("@/App");
-    renderApp(App);
+    await renderApp(App);
 
     await waitFor(() =>
       expect(screen.getByTestId("provider-list").textContent).toContain(
@@ -222,7 +246,7 @@ describe("App integration with MSW", () => {
 
   it("shows toast when auto sync fails in background", async () => {
     const { default: App } = await import("@/App");
-    renderApp(App);
+    await renderApp(App);
 
     await waitFor(() =>
       expect(screen.getByTestId("provider-list").textContent).toContain(
@@ -266,9 +290,9 @@ describe("App integration with MSW", () => {
     setLiveProviderIds("openclaw", ["deepseek-copy"]);
 
     const { default: App } = await import("@/App");
-    renderApp(App);
+    await renderApp(App);
 
-    fireEvent.click(screen.getByText("switch-openclaw"));
+    fireEvent.click(screen.getAllByText("switch-openclaw")[0]!);
 
     await waitFor(() =>
       expect(screen.getByTestId("provider-list").textContent).toContain(
@@ -312,9 +336,9 @@ describe("App integration with MSW", () => {
       .mockRejectedValueOnce(new Error("broken config"));
 
     const { default: App } = await import("@/App");
-    renderApp(App);
+    await renderApp(App);
 
-    fireEvent.click(screen.getByText("switch-openclaw"));
+    fireEvent.click(screen.getAllByText("switch-openclaw")[0]!);
 
     await waitFor(() =>
       expect(screen.getByTestId("provider-list").textContent).toContain(
