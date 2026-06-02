@@ -248,7 +248,21 @@ export const settingsApi = {
     } catch {
       throw new Error("Invalid URL");
     }
-    await invoke("open_external", { url });
+
+    const result = (await invoke("open_external", { url })) as
+      | boolean
+      | { url?: string }
+      | undefined;
+
+    // Web 适配层返回 URL，由浏览器负责真正打开新标签页。
+    if (
+      typeof window !== "undefined" &&
+      result &&
+      typeof result === "object" &&
+      typeof result.url === "string"
+    ) {
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    }
   },
 
   async setAutoLaunch(enabled: boolean): Promise<boolean> {

@@ -18,6 +18,7 @@
 ### 发布与运维层
 
 - `build-web-release.sh`、`start-web.sh`、`stop-web.sh`、GitHub Actions 与 README 负责 Web fork 的发布、运行与说明。
+- 关于页面、便携版“检查更新”入口以及 Tauri `plugins.updater.endpoints` 必须统一指向 Web fork 仓库 `zh3305/cc-switch-web`，避免界面跳转与桌面自动更新源分叉。
 
 ## 同步原则
 
