@@ -353,9 +353,9 @@ impl RequestForwarder {
             // 放在熔断器 allow 检查之前，避免在已经超限时还占用 HalfOpen 探测名额。
             if attempted_providers >= self.max_attempts {
                 log::warn!(
-                    "[{app_type_str}] 已达最大尝试次数上限 ({}/{}), 停止故障转移",
-                    attempted_providers,
-                    self.max_attempts
+                    "[{app_type_str}] 已达最大尝试次数上限 ({attempted_providers}/{max_attempts}), 停止故障转移",
+                    attempted_providers = attempted_providers,
+                    max_attempts = self.max_attempts,
                 );
                 break;
             }
@@ -521,11 +521,10 @@ impl RequestForwarder {
                                 signature_rectifier_non_retryable_client_error = true;
                             } else {
                                 log::info!(
-                                    "[{}] [RECT-001] thinking 签名整流器触发, 移除 {} thinking blocks, {} redacted_thinking blocks, {} signature fields",
-                                    app_type_str,
-                                    rectified.removed_thinking_blocks,
-                                    rectified.removed_redacted_thinking_blocks,
-                                    rectified.removed_signature_fields
+                                    "[{app_type_str}] [RECT-001] thinking 签名整流器触发, 移除 {n_thinking} thinking blocks, {n_redacted} redacted_thinking blocks, {n_signature} signature fields",
+                                    n_thinking = rectified.removed_thinking_blocks,
+                                    n_redacted = rectified.removed_redacted_thinking_blocks,
+                                    n_signature = rectified.removed_signature_fields
                                 );
 
                                 // 标记已重试（当前逻辑下重试后必定 return，保留标记以备将来扩展）
@@ -688,8 +687,7 @@ impl RequestForwarder {
                             }
 
                             log::info!(
-                                "[{}] [RECT-010] thinking budget 整流器触发, before={:?}, after={:?}",
-                                app_type_str,
+                                "[{app_type_str}] [RECT-010] thinking budget 整流器触发, before={:?}, after={:?}",
                                 budget_rectified.before,
                                 budget_rectified.after
                             );
@@ -830,7 +828,11 @@ impl RequestForwarder {
                             {
                                 let mut status = self.status.write().await;
                                 status.last_error =
-                                    Some(format!("Provider {} 失败: {}", provider.name, e));
+                                    Some(format!(
+                                        "Provider {provider_name} 失败: {err}",
+                                        provider_name = provider.name,
+                                        err = e
+                                    ));
                             }
 
                             let (log_code, log_message) = build_retryable_failure_log(
@@ -989,11 +991,11 @@ impl RequestForwarder {
             );
 
             log::debug!(
-                "[Copilot] 优化器分类: initiator={}, is_warmup={}, is_compact={}, is_subagent={}",
-                classification.initiator,
-                classification.is_warmup,
-                classification.is_compact,
-                classification.is_subagent
+                "[Copilot] 优化器分类: initiator={initiator}, is_warmup={is_warmup}, is_compact={is_compact}, is_subagent={is_subagent}",
+                initiator = classification.initiator,
+                is_warmup = classification.is_warmup,
+                is_compact = classification.is_compact,
+                is_subagent = classification.is_subagent
             );
 
             // 2. 孤立 tool_result 清理 — 分类完成后再清洗
@@ -1014,11 +1016,10 @@ impl RequestForwarder {
             // 4. Warmup 小模型降级
             if self.copilot_optimizer_config.warmup_downgrade && classification.is_warmup {
                 log::info!(
-                    "[Copilot] Warmup 请求降级到模型: {}",
-                    self.copilot_optimizer_config.warmup_model
+                    "[Copilot] Warmup 请求降级到模型: {warmup_model}",
+                    warmup_model = self.copilot_optimizer_config.warmup_model
                 );
-                mapped_body["model"] =
-                    serde_json::json!(&self.copilot_optimizer_config.warmup_model);
+                mapped_body["model"] = serde_json::json!(&self.copilot_optimizer_config.warmup_model);
             }
 
             // 预计算确定性 Request ID（在 body 被 move 之前）
@@ -1093,9 +1094,7 @@ impl RequestForwarder {
                 // 只在动态 endpoint 与当前 base_url 不同时替换
                 if dynamic_endpoint != base_url {
                     log::debug!(
-                        "[Copilot] 使用动态 API endpoint: {} (原: {})",
-                        dynamic_endpoint,
-                        base_url
+                        "[Copilot] 使用动态 API endpoint: {dynamic_endpoint} (原: {base_url})"
                     );
                     base_url = dynamic_endpoint;
                 }
@@ -1248,14 +1247,14 @@ impl RequestForwarder {
                         Ok(token) => {
                             auth = AuthInfo::new(token, AuthStrategy::GitHubCopilot);
                             log::debug!(
-                                "[Copilot] 成功获取 Copilot token (account={})",
-                                account_id.as_deref().unwrap_or("default")
+                                "[Copilot] 成功获取 Copilot token (account={account_label})",
+                                account_label = account_id.as_deref().unwrap_or("default")
                             );
                         }
                         Err(e) => {
                             log::error!(
-                                "[Copilot] 获取 Copilot token 失败 (account={}): {e}",
-                                account_id.as_deref().unwrap_or("default")
+                                "[Copilot] 获取 Copilot token 失败 (account={account_label}): {e}",
+                                account_label = account_id.as_deref().unwrap_or("default")
                             );
                             return Err(ProxyError::AuthError(format!(
                                 "GitHub Copilot 认证失败: {e}"
@@ -1304,8 +1303,8 @@ impl RequestForwarder {
                                 None => codex_auth.default_account_id().await,
                             };
                             log::debug!(
-                                "[CodexOAuth] 成功获取 access_token (account={})",
-                                codex_oauth_account_id.as_deref().unwrap_or("default")
+                                "[CodexOAuth] 成功获取 access_token (account={account_label})",
+                                account_label = codex_oauth_account_id.as_deref().unwrap_or("default")
                             );
                         }
                         Err(e) => {
@@ -1618,9 +1617,9 @@ impl RequestForwarder {
         if log::log_enabled!(log::Level::Debug) {
             if let Ok(body_str) = serde_json::to_string(&filtered_body) {
                 log::debug!(
-                    "[{tag}] >>> 请求体内容 ({}字节): {}",
-                    body_str.len(),
-                    body_str
+                    "[{tag}] >>> 请求体内容 ({body_len}字节): {body_str}",
+                    body_len = body_str.len(),
+                    body_str = body_str
                 );
             }
         }
@@ -2008,19 +2007,34 @@ fn summarize_proxy_error(error: &ProxyError) -> String {
             }
         }
         ProxyError::Timeout(message) => {
-            format!("请求超时: {}", summarize_text_for_log(message, 180))
+            format!(
+                "请求超时: {msg}",
+                msg = summarize_text_for_log(message, 180)
+            )
         }
         ProxyError::ForwardFailed(message) => {
-            format!("请求转发失败: {}", summarize_text_for_log(message, 180))
+            format!(
+                "请求转发失败: {msg}",
+                msg = summarize_text_for_log(message, 180)
+            )
         }
         ProxyError::TransformError(message) => {
-            format!("响应转换失败: {}", summarize_text_for_log(message, 180))
+            format!(
+                "响应转换失败: {msg}",
+                msg = summarize_text_for_log(message, 180)
+            )
         }
         ProxyError::ConfigError(message) => {
-            format!("配置错误: {}", summarize_text_for_log(message, 180))
+            format!(
+                "配置错误: {msg}",
+                msg = summarize_text_for_log(message, 180)
+            )
         }
         ProxyError::AuthError(message) => {
-            format!("认证失败: {}", summarize_text_for_log(message, 180))
+            format!(
+                "认证失败: {msg}",
+                msg = summarize_text_for_log(message, 180)
+            )
         }
         _ => summarize_text_for_log(&error.to_string(), 180),
     }
@@ -2348,20 +2362,20 @@ fn log_prompt_cache_trace(
         .unwrap_or_else(|| "absent".to_string());
 
     log::debug!(
-        "[CacheTrace] app={}, provider={}, endpoint={}, api_format={}, session_client_provided={}, prompt_cache_key={}, store={}, stream={}, instructions_hash={}, tools_hash={}, input_hash={}, include_hash={}, body_hash={}",
-        app_type.as_str(),
-        provider.id,
-        endpoint,
-        api_format.unwrap_or("native"),
-        session_client_provided,
-        prompt_cache_key,
-        store,
-        stream,
-        short_value_hash(body.get("instructions")),
-        short_value_hash(body.get("tools")),
-        short_value_hash(body.get("input")),
-        short_value_hash(body.get("include")),
-        short_value_hash(Some(body)),
+        "[CacheTrace] app={app}, provider={provider_id}, endpoint={endpoint}, api_format={api_format_label}, session_client_provided={session_client_provided}, prompt_cache_key={prompt_cache_key}, store={store}, stream={stream}, instructions_hash={instructions_hash}, tools_hash={tools_hash}, input_hash={input_hash}, include_hash={include_hash}, body_hash={body_hash}",
+        app = app_type.as_str(),
+        provider_id = provider.id,
+        endpoint = endpoint,
+        api_format_label = api_format.unwrap_or("native"),
+        session_client_provided = session_client_provided,
+        prompt_cache_key = prompt_cache_key,
+        store = store,
+        stream = stream,
+        instructions_hash = short_value_hash(body.get("instructions")),
+        tools_hash = short_value_hash(body.get("tools")),
+        input_hash = short_value_hash(body.get("input")),
+        include_hash = short_value_hash(body.get("include")),
+        body_hash = short_value_hash(Some(body)),
     );
 }
 

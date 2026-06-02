@@ -566,9 +566,9 @@ pub fn set_log_config(ctx: &CoreContext, config: LogConfig) -> Result<bool, Stri
         .map_err(|e| e.to_string())?;
     log::set_max_level(config.to_level_filter());
     log::info!(
-        "日志配置已更新: enabled={}, level={}",
-        config.enabled,
-        config.level
+        "日志配置已更新: enabled={enabled}, level={level}",
+        enabled = config.enabled,
+        level = config.level
     );
     Ok(true)
 }
@@ -2269,6 +2269,9 @@ pub fn import_from_deeplink_unified(
                 "key": skill_key
             }))
         }
-        _ => Err(format!("Unsupported resource type: {}", request.resource)),
+        _ => Err(format!(
+            "Unsupported resource type: {resource}",
+            resource = request.resource
+        )),
     }
 }
